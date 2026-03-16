@@ -7,12 +7,12 @@
     },
     "SVM RBF": {
       "acuracia_pct": 91.9,
-      "latencia_ms": 2.8548,
+      "latencia_ms": 2.5394,
       "tamanho_kb": 41336.8
     },
     "Reg. Logística": {
       "acuracia_pct": 88.7,
-      "latencia_ms": 0.0064,
+      "latencia_ms": 0.0433,
       "tamanho_kb": 117.9
     },
     "Naive Bayes": {
@@ -21,17 +21,17 @@
       "tamanho_kb": 235.0
     },
     "Edge AI (TFLite INT8)": {
-      "acuracia_pct": 92.75,
-      "latencia_ms": 0.0098,
+      "acuracia_pct": 91.26,
+      "latencia_ms": 0.0107,
       "tamanho_kb": 806.0
     }
   },
   "conclusao": {
     "melhor_baseline": "SVM Linear",
     "acc_melhor_baseline": 92.96,
-    "acc_edge_ai": 92.75,
-    "diferenca_pp": -0.21,
-    "speedup_latencia": 0.9,
+    "acc_edge_ai": 91.26,
+    "diferenca_pp": -1.71,
+    "speedup_latencia": 0.8,
     "reducao_tamanho_x": 0.1
   }
 }
