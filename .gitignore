@@ -1,0 +1,22 @@
+# Ambiente Python
+venv/
+__pycache__/
+*.pyc
+
+# Dados e Banco de Dados Local
+data/raw/
+data/entradas/
+data/quarentena/
+data/seguros/
+*.db
+*.sqlite3
+
+# Modelos Pesados de Treinamento
+models/*.h5
+models/*.keras
+
+# Variáveis de Ambiente e IDEs
+.env
+.vscode/
+.idea/
+.DS_Store
