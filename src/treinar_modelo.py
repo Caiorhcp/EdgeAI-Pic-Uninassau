@@ -1,5 +1,14 @@
 # src/treinar_modelo.py — versão TF-IDF + rede densa
 import os
+import ctypes
+# Remove TF_USE_LEGACY_KERAS do ambiente C/C++ do Windows para evitar conflitos na lazy initialization
+if "TF_USE_LEGACY_KERAS" in os.environ:
+    del os.environ["TF_USE_LEGACY_KERAS"]
+try:
+    ctypes.windll.kernel32.SetEnvironmentVariableW("TF_USE_LEGACY_KERAS", None)
+except Exception:
+    pass
+
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -10,6 +19,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from sklearn.utils.class_weight import compute_class_weight
 
 print("Carregando dados...")
 X_train = np.load("data/processed/X_train.npy")
@@ -26,13 +36,11 @@ INPUT_DIM   = X_train.shape[1]
 NUM_CLASSES = 5
 
 modelo = Sequential([
-    Dense(256, activation="relu", input_shape=(INPUT_DIM,)),
-    BatchNormalization(),
-    Dropout(0.4),
-    Dense(128, activation="relu"),
+    tf.keras.Input(shape=(INPUT_DIM,)),
+    Dense(64, activation="relu", kernel_regularizer=tf.keras.regularizers.L2(0.001)),
     BatchNormalization(),
     Dropout(0.3),
-    Dense(64, activation="relu"),
+    Dense(32, activation="relu", kernel_regularizer=tf.keras.regularizers.L2(0.001)),
     Dropout(0.2),
     Dense(NUM_CLASSES, activation="softmax")
 ])
@@ -55,11 +63,18 @@ checkpoint = ModelCheckpoint(
     monitor="val_accuracy", save_best_only=True, verbose=1
 )
 
+print("\nCalculando pesos de classes para balanceamento da Matriz de Confusão...")
+classes_unicas = np.unique(y_train)
+pesos_balanceados = compute_class_weight(class_weight='balanced', classes=classes_unicas, y=y_train)
+class_weights_dict = { cl: pesos_balanceados[i] for i, cl in enumerate(classes_unicas) }
+print("Pesos:", class_weights_dict)
+
 print("\nTreinando...")
 hist = modelo.fit(
     X_train, y_train,
     epochs=150, batch_size=8,
     validation_split=0.2,
+    class_weight=class_weights_dict,
     callbacks=[early_stop, checkpoint],
     verbose=1
 )
@@ -92,7 +107,7 @@ exemplos = [
 ]
 for t in exemplos:
     c, conf = classificar(t)
-    print(f"  [{c.upper():10s}] {conf:5.1f}%  →  {t[:60]}...")
+    print(f"  [{c.upper():10s}] {conf:5.1f}%  ->  {t[:60]}...")
 
 # Gráfico
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))

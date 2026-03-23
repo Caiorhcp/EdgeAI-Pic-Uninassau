@@ -3,6 +3,7 @@
 import os
 import json
 import random
+from urllib.parse import quote
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -172,7 +173,7 @@ def main():
     for termo in termos_stf:
         try:
             url = (f"https://jurisprudencia.stf.jus.br/api/search/search"
-                   f"?query={requests.utils.quote(termo)}&pageSize=10&page=1")
+                   f"?query={quote(termo)}&pageSize=10&page=1")
             resp = requests.get(url, headers=HEADERS, timeout=15, verify=False)
             if resp.status_code == 200:
                 data = resp.json()

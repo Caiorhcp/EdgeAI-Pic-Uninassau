@@ -131,9 +131,9 @@ ax3.grid(axis="y", alpha=0.3)
 # 5.4 F1-score por classe
 ax4 = fig.add_subplot(2, 3, 4)
 from sklearn.metrics import f1_score
-f1s  = f1_score(y_test, y_pred_tflite, average=None)
+f1s  = f1_score(y_test, y_pred_tflite, average=None)  # pyright: ignore
 bars4 = ax4.barh(CLASSES, f1s, color="#3498db", edgecolor="white")
-for bar, val in zip(bars4, f1s):
+for bar, val in zip(bars4, f1s):  # pyright: ignore
     ax4.text(val + 0.01, bar.get_y() + bar.get_height()/2,
              f"{val:.2f}", va="center", fontsize=10)
 ax4.set_xlim(0, 1.15)
@@ -148,7 +148,7 @@ etapas    = ["Keras\noriginal", "→ TFLite\nbase", "→ TFLite\nINT8"]
 reducoes  = [100, tam_tflite/tam_keras*100, tam_int8/tam_keras*100]
 ax5.plot(etapas, reducoes, "o-", color="#8e44ad", linewidth=2.5, markersize=10)
 for i, (e, r) in enumerate(zip(etapas, reducoes)):
-    ax5.annotate(f"{r:.1f}%", (e, r),
+    ax5.annotate(f"{r:.1f}%", (e, r),  # pyright: ignore
                  textcoords="offset points", xytext=(0, 12),
                  ha="center", fontsize=10, fontweight="bold")
 ax5.set_ylim(0, 120)

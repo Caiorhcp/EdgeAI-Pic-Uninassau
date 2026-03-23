@@ -132,7 +132,10 @@ class SumarizadorJuridico:
 
         # Vetorizar frases com TF-IDF
         try:
-            matriz = self.vectorizer.fit_transform(frases).toarray()
+            from typing import Any as _Any
+            _m: _Any = self.vectorizer.fit_transform(frases)
+            # pyright: ignore[reportAttributeAccessIssue]
+            matriz = getattr(_m, "toarray", lambda: _m)() if hasattr(_m, "toarray") else _m
         except Exception:
             # Fallback: pegar as primeiras n_frases
             frases_sel = frases[:n_frases]

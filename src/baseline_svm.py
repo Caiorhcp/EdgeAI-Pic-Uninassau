@@ -255,7 +255,7 @@ fig.legend(
     loc="lower center", ncol=2, fontsize=10
 )
 
-plt.tight_layout(rect=[0, 0.04, 1, 1])
+plt.tight_layout(rect=(0.0, 0.04, 1.0, 1.0))
 caminho_fig = "models/relatorio/comparacao_baseline.png"
 plt.savefig(caminho_fig, dpi=150, bbox_inches="tight")
 print(f"\nGráfico salvo em {caminho_fig}")

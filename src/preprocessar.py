@@ -27,21 +27,26 @@ vectorizer = TfidfVectorizer(
     min_df=1,
     sublinear_tf=True
 )
-X = vectorizer.fit_transform(textos_limpos).toarray()
+from typing import Any as _Any
+_tfidf_fit: _Any = vectorizer.fit_transform(textos_limpos)
+# pyright: ignore[reportAttributeAccessIssue]
+X = getattr(_tfidf_fit, "toarray", lambda: _tfidf_fit)() if hasattr(_tfidf_fit, "toarray") else _tfidf_fit
 
 encoder = LabelEncoder()
 y = encoder.fit_transform(classes)
 
 print(f"\nMapeamento:")
-for i, c in enumerate(encoder.classes_):
-    print(f"  {i} → {c}")
+for i, c in enumerate(list(encoder.classes_)):  # type: ignore
+    print(f"  {i} -> {c}")
 
-X_train, X_test, y_train, y_test = train_test_split(
+X_train: np.ndarray
+X_test: np.ndarray
+X_train, X_test, y_train, y_test = train_test_split(  # type: ignore[assignment]
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
 print(f"\nShape X: {X.shape}")
-print(f"Treino : {X_train.shape[0]} | Teste: {X_test.shape[0]}")
+print(f"Treino : {X_train.shape[0]} | Teste: {X_test.shape[0]}")  # pyright: ignore[reportAttributeAccessIssue]
 
 os.makedirs("data/processed", exist_ok=True)
 np.save("data/processed/X_train.npy", X_train)

@@ -1,0 +1,11 @@
+{
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "venvPath": ".",
+  "venv": "venv",
+  "extraPaths": ["."],
+  "include": ["src", "tests", "pipeline", "app.py", "rodar_tudo.py", "verificar_ambiente.py", "conftest.py"],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false
+}

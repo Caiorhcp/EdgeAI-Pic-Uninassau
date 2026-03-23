@@ -43,7 +43,8 @@ print(f"Amostras por fold (aprox.): {len(X_completo) // N_SPLITS}")
 # ─── Função para construir o modelo ──────────────────────────────────────────
 def construir_modelo():
     m = tf.keras.Sequential([
-        tf.keras.layers.Dense(256, activation="relu", input_shape=(INPUT_DIM,)),
+        tf.keras.Input(shape=(INPUT_DIM,)),
+        tf.keras.layers.Dense(256, activation="relu"),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.4),
         tf.keras.layers.Dense(128, activation="relu"),
@@ -104,13 +105,13 @@ for fold, (idx_treino, idx_val) in enumerate(skf.split(X_completo, y_completo)):
     y_pred = np.argmax(modelo.predict(X_fold_val, verbose=0), axis=1)
 
     acc       = accuracy_score(y_fold_val, y_pred)
-    f1_macro  = f1_score(y_fold_val, y_pred, average="macro",    zero_division=0)
-    f1_weight = f1_score(y_fold_val, y_pred, average="weighted", zero_division=0)
-    prec      = precision_score(y_fold_val, y_pred, average="macro", zero_division=0)
-    rec       = recall_score(y_fold_val, y_pred, average="macro",    zero_division=0)
+    f1_macro  = f1_score(y_fold_val, y_pred, average="macro",    zero_division=0)  # pyright: ignore
+    f1_weight = f1_score(y_fold_val, y_pred, average="weighted", zero_division=0)  # pyright: ignore
+    prec      = precision_score(y_fold_val, y_pred, average="macro", zero_division=0)  # pyright: ignore
+    rec       = recall_score(y_fold_val, y_pred, average="macro",    zero_division=0)  # pyright: ignore
 
     # F1 por classe
-    f1_classes = f1_score(y_fold_val, y_pred, average=None, zero_division=0)
+    f1_classes = f1_score(y_fold_val, y_pred, average=None, zero_division=0)  # pyright: ignore
 
     fold_resultado = {
         "fold":       fold + 1,
@@ -119,7 +120,7 @@ for fold, (idx_treino, idx_val) in enumerate(skf.split(X_completo, y_completo)):
         "f1_weight":  f1_weight,
         "precision":  prec,
         "recall":     rec,
-        "f1_classes": {CLASSES[i]: float(f1_classes[i]) for i in range(len(CLASSES))},
+        "f1_classes": {CLASSES[i]: float(f1_classes[i]) for i in range(len(CLASSES))},  # type: ignore[index]
         "n_treino":   len(idx_treino),
         "n_val":      len(idx_val),
     }

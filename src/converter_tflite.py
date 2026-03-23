@@ -93,10 +93,10 @@ exemplos = [
 acertos = 0
 for esperado, texto in exemplos:
     classe, confianca = classificar_tflite(texto)
-    ok = "✓" if classe == esperado else "✗"
+    ok = "OK " if classe == esperado else "ERR"
     if classe == esperado:
         acertos += 1
-    print(f"  {ok} [{classe.upper():10s}] {confianca:5.1f}%  →  {texto[:55]}...")
+    print(f"  {ok} [{classe.upper():10s}] {confianca:5.1f}%  ->  {texto[:55]}...")
 
 print(f"\nAcertos: {acertos}/{len(exemplos)}")
 
@@ -115,7 +115,7 @@ for _ in range(100):
     _ = interpreter.get_tensor(output_details[0]['index'])
 fim = time.time()
 
-ms_por_inferencia = (fim - inicio) / 100 * 1000
+ms_por_inferencia = max((fim - inicio) / 100 * 1000, 0.001)
 print(f"  Tempo médio por inferência: {ms_por_inferencia:.2f} ms")
 print(f"  Inferências por segundo   : {1000/ms_por_inferencia:.0f}")
 

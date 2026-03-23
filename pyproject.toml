@@ -1,0 +1,16 @@
+# pyproject.toml — configuração do pytest e ferramentas de qualidade
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v"
+
+[tool.pyright]
+pythonVersion = "3.11"
+pythonPlatform = "Windows"
+include = ["src", "tests", "pipeline", "app.py", "rodar_tudo.py", "verificar_ambiente.py", "conftest.py"]
+extraPaths = ["."]
+venvPath = "."
+venv = "venv"
+typeCheckingMode = "basic"
+reportMissingImports = false
+reportMissingModuleSource = false

@@ -6,6 +6,7 @@ import os
 import re
 import json
 import time
+from urllib.parse import quote
 import requests
 from bs4 import BeautifulSoup
 
@@ -218,7 +219,7 @@ def coletar_stj_api() -> list:
     for termo in termos_busca:
         url = (
             "https://jurisprudencia.stj.jus.br/docs/api/search"
-            f"?query={requests.utils.quote(termo)}"
+            f"?query={quote(termo)}"
             "&rows=15&start=0"
             "&tipo=acordao"
         )
@@ -270,7 +271,7 @@ def coletar_stf_api() -> list:
     for termo in termos_busca:
         url = (
             "https://jurisprudencia.stf.jus.br/api/search/search"
-            f"?query={requests.utils.quote(termo)}"
+            f"?query={quote(termo)}"
             "&pageSize=10&page=1"
         )
         try:

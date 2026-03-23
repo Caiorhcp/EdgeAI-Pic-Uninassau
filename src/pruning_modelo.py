@@ -1,11 +1,21 @@
 # src/pruning_modelo.py
 import os
+import ctypes
+if "TF_USE_LEGACY_KERAS" in os.environ:
+    del os.environ["TF_USE_LEGACY_KERAS"]
+try:
+    ctypes.windll.kernel32.SetEnvironmentVariableW("TF_USE_LEGACY_KERAS", None)
+except Exception:
+    pass
+
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"]  = "2"
 
 import numpy as np
 import time
 import tensorflow as tf
+import tensorflow_model_optimization as tfmot
+from sklearn.utils.class_weight import compute_class_weight
 
 print("Carregando dados...")
 X_train = np.load("data/processed/X_train.npy").astype(np.float32)
@@ -14,15 +24,18 @@ y_train = np.load("data/processed/y_train.npy")
 y_test  = np.load("data/processed/y_test.npy")
 INPUT_DIM = X_train.shape[1]
 
+# Computar pesos balanceados globais
+classes_unicas = np.unique(y_train)
+pesos_balanceados = compute_class_weight(class_weight='balanced', classes=classes_unicas, y=y_train)
+class_weights_dict = { cl: pesos_balanceados[i] for i, cl in enumerate(classes_unicas) }
+
 def construir_e_treinar(verbose=0):
     m = tf.keras.Sequential([
-        tf.keras.layers.Dense(256, activation="relu", input_shape=(INPUT_DIM,)),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(0.4),
-        tf.keras.layers.Dense(128, activation="relu"),
+        tf.keras.Input(shape=(INPUT_DIM,)),
+        tf.keras.layers.Dense(64, activation="relu", kernel_regularizer=tf.keras.regularizers.L2(0.001)),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(32, activation="relu", kernel_regularizer=tf.keras.regularizers.L2(0.001)),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(5, activation="softmax"),
     ])
@@ -35,6 +48,7 @@ def construir_e_treinar(verbose=0):
         X_train, y_train,
         epochs=150, batch_size=8,
         validation_split=0.2,
+        class_weight=class_weights_dict,
         callbacks=[tf.keras.callbacks.EarlyStopping(
             monitor="val_accuracy", patience=20,
             restore_best_weights=True, verbose=0
@@ -43,18 +57,23 @@ def construir_e_treinar(verbose=0):
     )
     return m
 
-def aplicar_pruning(modelo, esparsidade):
-    total = zerados = 0
-    for layer in modelo.layers:
-        if not isinstance(layer, tf.keras.layers.Dense):
-            continue
-        pesos, bias = layer.get_weights()
-        threshold   = np.percentile(np.abs(pesos), esparsidade * 100)
-        mascara     = np.abs(pesos) >= threshold
-        layer.set_weights([pesos * mascara, bias])
-        zerados += int(np.sum(~mascara))
-        total   += pesos.size
-    print(f"  Pesos zerados: {zerados:,}/{total:,} ({zerados/total*100:.1f}%)")
+def aplicar_pruning_tfmot(modelo_base, esparsidade_final, batch_size=8, validation_split=0.2, epochs=20):
+    num_treino = int(len(X_train) * (1 - validation_split))
+    steps_per_epoch = int(np.ceil(num_treino / batch_size))
+    end_step = steps_per_epoch * epochs
+    
+    pruning_params = {
+        'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
+            initial_sparsity=0.20,
+            final_sparsity=esparsidade_final,
+            begin_step=0,
+            end_step=end_step
+        )
+    }
+    
+    # Prune full model or just Dense layers
+    modelo_pruned = tfmot.sparsity.keras.prune_low_magnitude(modelo_base, **pruning_params)
+    return modelo_pruned
 
 def para_tflite(modelo):
     def rep():
@@ -94,7 +113,7 @@ with open("models/tflite/modelo_base_ref.tflite", "wb") as f:
 tam_base = os.path.getsize("models/tflite/modelo_base_ref.tflite") / 1024
 ms_base  = benchmark(tflite_base)
 
-print(f"Base → acurácia: {acc_base*100:.1f}% | tamanho: {tam_base:.1f} KB | latência: {ms_base:.3f} ms\n")
+print(f"Base -> acurácia: {acc_base*100:.1f}% | tamanho: {tam_base:.1f} KB | latência: {ms_base:.3f} ms\n")
 
 # ─── Pruning em 4 níveis ──────────────────────────────────────────────────────
 niveis    = [0.30, 0.50, 0.70, 0.90]
@@ -104,26 +123,36 @@ for esp in niveis:
     print(f"Esparsidade {int(esp*100)}%:")
     m = construir_e_treinar()
     m.load_weights("models/pesos_base.weights.h5")
-    aplicar_pruning(m, esp)
+    
+    m_pruned = aplicar_pruning_tfmot(m, esp, batch_size=8, validation_split=0.2, epochs=20)
 
-    m.compile(
+    m_pruned.compile(
         optimizer=tf.keras.optimizers.Adam(0.0005),
         loss="sparse_categorical_crossentropy",
         metrics=["accuracy"]
     )
-    m.fit(
+    
+    callbacks = [
+        tfmot.sparsity.keras.UpdatePruningStep(),
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_accuracy", patience=8,
+            restore_best_weights=True, verbose=0
+        )
+    ]
+    
+    m_pruned.fit(
         X_train, y_train,
         epochs=20, batch_size=8,
         validation_split=0.2,
-        callbacks=[tf.keras.callbacks.EarlyStopping(
-            monitor="val_accuracy", patience=8,
-            restore_best_weights=True, verbose=0
-        )],
+        class_weight=class_weights_dict,
+        callbacks=callbacks,
         verbose=0
     )
 
-    _, acc = m.evaluate(X_test, y_test, verbose=0)
-    tb     = para_tflite(m)
+    _, acc = m_pruned.evaluate(X_test, y_test, verbose=0)
+    
+    m_exportable = tfmot.sparsity.keras.strip_pruning(m_pruned)
+    tb     = para_tflite(m_exportable)
     caminho = f"models/tflite/modelo_pruned_{int(esp*100)}.tflite"
     with open(caminho, "wb") as f:
         f.write(tb)
@@ -148,7 +177,7 @@ print("-" * 56)
 print(f"{'Base (0%)':>12}  {acc_base*100:>8.1f}%  {tam_base:>8.1f} KB       —")
 for r in resultados:
     red  = (1 - r["tam"] / tam_base) * 100
-    flag = "  ← MELHOR" if r["esp"] == melhor["esp"] else ""
+    flag = "  <- MELHOR" if r["esp"] == melhor["esp"] else ""
     print(f"{r['esp']:>11}%  {r['acc']:>8.1f}%  {r['tam']:>8.1f} KB  {red:>6.1f}%{flag}")
 print("=" * 56)
 
@@ -157,4 +186,4 @@ shutil.copy(
     f"models/tflite/modelo_pruned_{melhor['esp']}.tflite",
     "models/tflite/modelo_pruned_final.tflite"
 )
-print(f"\nMelhor modelo salvo → models/tflite/modelo_pruned_final.tflite")
+print(f"\nMelhor modelo salvo -> models/tflite/modelo_pruned_final.tflite")

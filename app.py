@@ -1,20 +1,25 @@
-# app.py — Edge AI Jurídico · com detector LGPD
+# app.py — Edge AI Jurídico · Refatorado com Clean Architecture / DDD
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"]  = "2"
 
-import re, time, pickle
-import numpy as np
-import pdfplumber
 import streamlit as st
-import tensorflow as tf
 from datetime import datetime
-from src.ner_juridico import NERJuridico, PADROES
-from src.gerar_relatorio import gerar_relatorio
-from src.ocr_juridico import extrair_texto_ocr, detectar_tipo_pdf
-from src.sumarizador import SumarizadorJuridico
-from src.detector_lgpd import DetectorLGPD
+
+# ─── Camada de Aplicação (Use Cases) ────────────────────────────────────────
+from src.application.dtos.documento_input_dto import DocumentoInputDTO
+from src.application.use_cases.analisar_documento import AnalisarDocumentoUseCase
+from src.application.use_cases.analisar_pdf import AnalisarPDFUseCase
+
+# ─── Camada de Infraestrutura (Adaptadores) ───────────────────────────────────
+from src.infrastructure.ml.tflite_classificador import TFLiteClassificador
+from src.infrastructure.nlp.ner_juridico import PADROES
+from src.infrastructure.report.reportlab_gerador import gerar_relatorio
+
+# ─── Domínio (Value Objects) ──────────────────────────────────────────────────
+from src.domain.value_objects.classe_documento import ClasseDocumento
+from src.domain.value_objects.severidade import Severidade
 
 st.set_page_config(
     page_title="Edge AI Jurídico",
@@ -160,27 +165,45 @@ hr{border-color:var(--border)!important;}
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Constantes ───────────────────────────────────────────────────────────────
+# ─── Constantes de UI (do domínio via enum) ───────────────────────────────────
 CLASSES_INFO = {
-    "lgpd":     {"emoji":"🔒","cor":"#c084fc","cor_a":"rgba(192,132,252,.13)","desc":"Proteção de Dados Pessoais"},
-    "acordao":  {"emoji":"⚖️", "cor":"#4aa3df","cor_a":"rgba(74,163,223,.13)", "desc":"Decisão Judicial / Acórdão"},
-    "contrato": {"emoji":"📄","cor":"#4ade80","cor_a":"rgba(74,222,128,.11)", "desc":"Contrato / Instrumento Jurídico"},
-    "peticao":  {"emoji":"📋","cor":"#fb923c","cor_a":"rgba(251,146,60,.13)", "desc":"Petição / Requerimento Judicial"},
-    "outro":    {"emoji":"📚","cor":"#94a3b8","cor_a":"rgba(148,163,184,.11)","desc":"Texto Jurídico Geral"},
+    c.value: {"emoji": c.emoji, "cor": c.cor_hex,
+               "cor_a": c.cor_hex.replace("#", "rgba(").rstrip(")") + ",.13)",
+               "desc": c.descricao}
+    for c in ClasseDocumento
 }
+# Fallback cor_a simplificado
+CLASSES_INFO["lgpd"]["cor_a"]     = "rgba(192,132,252,.13)"
+CLASSES_INFO["acordao"]["cor_a"]  = "rgba(74,163,223,.13)"
+CLASSES_INFO["contrato"]["cor_a"] = "rgba(74,222,128,.11)"
+CLASSES_INFO["peticao"]["cor_a"]  = "rgba(251,146,60,.13)"
+CLASSES_INFO["outro"]["cor_a"]    = "rgba(148,163,184,.11)"
+
 RISCO = {
-    "ALTO":  {"css":"ej-alto",  "icon":"🔴"},
-    "MÉDIO": {"css":"ej-medio", "icon":"🟡"},
-    "BAIXO": {"css":"ej-baixo", "icon":"🟢"},
+    "ALTO":  {"css": "ej-alto",  "icon": "🔴"},
+    "MÉDIO": {"css": "ej-medio", "icon": "🟡"},
+    "BAIXO": {"css": "ej-baixo", "icon": "🟢"},
 }
-SEV_CSS = {"CRÍTICA":"sev-critica","ALTA":"sev-alta","MÉDIA":"sev-media","BAIXA":"sev-baixa"}
-SEV_ICON = {"CRÍTICA":"🔴","ALTA":"🟠","MÉDIA":"🟡","BAIXA":"🟢"}
+SEV_CSS  = {s.value: f"sev-{s.name.lower().replace('Í','i').replace('É','e')}" for s in Severidade}
+SEV_CSS  = {
+    Severidade.CRITICA.value: "sev-critica",
+    Severidade.ALTA.value:    "sev-alta",
+    Severidade.MEDIA.value:   "sev-media",
+    Severidade.BAIXA.value:   "sev-baixa",
+}
+SEV_ICON = {
+    Severidade.CRITICA.value: "🔴",
+    Severidade.ALTA.value:    "🟠",
+    Severidade.MEDIA.value:   "🟡",
+    Severidade.BAIXA.value:   "🟢",
+}
 NIVEL_CSS = {
     "CONFORME":              "nivel-conforme",
     "PARCIALMENTE CONFORME": "nivel-parcial",
     "ATENÇÃO":               "nivel-atencao",
     "NÃO CONFORME":          "nivel-nao-conforme",
 }
+
 EXEMPLOS = {
     "LGPD":     "O titular CPF 123.456.789-09 tem direito à exclusão de seus dados pessoais conforme Lei 13.709/2018. O controlador deve adotar medidas de segurança para proteger dados pessoais de acessos não autorizados. A ANPD pode aplicar sanções administrativas que vão desde advertência até multa de dois por cento do faturamento. O encarregado pelo tratamento de dados pessoais atuará como canal de comunicação com a ANPD.",
     "Acórdão":  "ACÓRDÃO. STJ, Terceira Turma, por unanimidade, negado provimento ao recurso especial, nos termos do voto do relator. A jurisprudência desta Corte é pacífica no sentido de que o prazo prescricional começa a fluir da data do conhecimento do dano. Incide o enunciado da Súmula 7 do STJ quando a pretensão recursal demanda reexame de provas. O dano moral decorrente de inscrição indevida em cadastro de restrição ao crédito é presumido.",
@@ -189,195 +212,129 @@ EXEMPLOS = {
     "Outro":    "O princípio da dignidade da pessoa humana, previsto no artigo 1 da Constituição Federal, é fundamento da República Federativa do Brasil. O contraditório e a ampla defesa são garantias fundamentais do processo democrático. A coisa julgada torna imutável e indiscutível a decisão de mérito não mais sujeita a recurso. O mandado de segurança protege direito líquido e certo não amparado por habeas corpus.",
 }
 
-# ─── Recursos ─────────────────────────────────────────────────────────────────
+# ─── Inicialização dos Use Cases (singleton via cache) ───────────────────────
 @st.cache_resource(show_spinner="Carregando modelo TFLite…")
-def carregar_recursos():
-    interp = tf.lite.Interpreter("models/tflite/modelo_juridico_int8.tflite")
-    interp.allocate_tensors()
-    with open("data/processed/vectorizer.pkl","rb") as f: vec = pickle.load(f)
-    with open("data/processed/encoder.pkl",   "rb") as f: enc = pickle.load(f)
-    return interp, vec, enc, NERJuridico(), SumarizadorJuridico(), DetectorLGPD()
+def _inicializar():
+    classificador    = TFLiteClassificador()
+    analisar_doc_uc  = AnalisarDocumentoUseCase(classificador)
+    analisar_pdf_uc  = AnalisarPDFUseCase(classificador)
+    return analisar_doc_uc, analisar_pdf_uc
 
-interp, vectorizer, encoder, ner, sumarizador, detector_lgpd = carregar_recursos()
-inp_d = interp.get_input_details()
-out_d = interp.get_output_details()
+analisar_doc_uc, analisar_pdf_uc = _inicializar()
 
 # ─── Session state ────────────────────────────────────────────────────────────
 for k, v in {
-    "resultado_pdf":None,"resultado_texto":None,
-    "n_frases_pdf":4,"n_frases_texto":4,"texto_input":"",
+    "resultado_pdf": None, "resultado_texto": None,
+    "n_frases_pdf": 4, "n_frases_texto": 4, "texto_input": "",
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-def _limpar(t):
-    return re.sub(r"[^a-záàãâéêíóôõúüç\s]"," ",t.lower())
+# ─── Helpers de UI ────────────────────────────────────────────────────────────
+def H(html): st.markdown(html, unsafe_allow_html=True)
 
-def _classificar(texto):
-    t0=time.perf_counter()
-    v=vectorizer.transform([_limpar(texto)]).toarray().astype(np.float32)
-    interp.set_tensor(inp_d[0]["index"],v)
-    interp.invoke()
-    probs=interp.get_tensor(out_d[0]["index"])[0]
-    return probs,(time.perf_counter()-t0)*1000
 
-def _processar(texto,nome,tipo_pdf=None,chars_extra=""):
-    probs,ms=_classificar(texto)
-    idx=int(np.argmax(probs))
-    classe=encoder.classes_[idx]
-    rel_ner=ner.relatorio(texto)
-    return {
-        "probs":probs,
-        "probs_dict":{encoder.classes_[i]:float(probs[i]) for i in range(len(probs))},
-        "ms":ms,"classe":classe,"confianca":probs[idx]*100,
-        "rel_ner":rel_ner,
-        "analise_lgpd": detector_lgpd.analisar(texto, rel_ner, classe),
-        "texto":texto,"nome_doc":nome,"tipo_pdf":tipo_pdf,"chars_extra":chars_extra,
-    }
-
-def _extrair_smart(arq):
-    tipo=detectar_tipo_pdf(arq);arq.seek(0)
-    if tipo=="digital":
-        pgs,n=[],0
-        with pdfplumber.open(arq) as pdf:
-            n=len(pdf.pages)
-            for i,p in enumerate(pdf.pages):
-                t=p.extract_text()
-                if t: pgs.append(f"[Página {i+1}]\n{t}")
-        return "\n\n".join(pgs),"digital",{"paginas":n,"metodo":"pdfplumber"}
-    arq.seek(0);res=extrair_texto_ocr(arq)
-    return res["texto_completo"],"escaneado",{
-        "paginas":res["total_paginas"],"paginas_com_texto":res["paginas_com_texto"],
-        "metodo":"Tesseract OCR"}
-
-def _paginas_smart(arq):
-    tipo=detectar_tipo_pdf(arq);arq.seek(0);rs=[]
-    if tipo=="digital":
-        with pdfplumber.open(arq) as pdf:
-            for i,p in enumerate(pdf.pages):
-                t=p.extract_text()
-                if t and len(t.strip())>20:
-                    probs,ms=_classificar(t);idx=int(np.argmax(probs))
-                    rs.append({"pagina":i+1,"classe":encoder.classes_[idx],
-                               "confianca":probs[idx]*100,"texto":t[:500],"ms":ms,"probs":probs})
-    else:
-        arq.seek(0);res=extrair_texto_ocr(arq)
-        for p in res["paginas"]:
-            if p["chars"]>20:
-                probs,ms=_classificar(p["texto"]);idx=int(np.argmax(probs))
-                rs.append({"pagina":p["pagina"],"classe":encoder.classes_[idx],
-                           "confianca":probs[idx]*100,"texto":p["texto"][:500],"ms":ms,"probs":probs})
-    return rs,tipo
-
-def H(html): st.markdown(html,unsafe_allow_html=True)
-
-def _barras(probs,classe_top):
-    html=""
-    for i in np.argsort(probs)[::-1]:
-        c=encoder.classes_[i];info=CLASSES_INFO[c];pct=probs[i]*100
-        bold="font-weight:700" if c==classe_top else "color:#7d8fa3"
-        html+=(f'<div class="ej-pb"><div class="ej-pbl">'
-               f'<span style="{bold}">{info["emoji"]} {c.upper()}</span>'
-               f'<span style="{bold}">{pct:.1f}%</span></div>'
-               f'<div class="ej-pbt"><div class="ej-pbf" style="width:{pct:.1f}%;background:{info["cor"]}"></div>'
-               f'</div></div>')
+def _barras(probs: dict, classe_top: str):
+    html = ""
+    for cls, pct_float in sorted(probs.items(), key=lambda x: -x[1]):
+        info = CLASSES_INFO[cls]
+        pct  = pct_float * 100
+        bold = "font-weight:700" if cls == classe_top else "color:#7d8fa3"
+        html += (f'<div class="ej-pb"><div class="ej-pbl">'
+                 f'<span style="{bold}">{info["emoji"]} {cls.upper()}</span>'
+                 f'<span style="{bold}">{pct:.1f}%</span></div>'
+                 f'<div class="ej-pbt"><div class="ej-pbf" style="width:{pct:.1f}%;background:{info["cor"]}"></div>'
+                 f'</div></div>')
     H(html)
 
-def _secao_resumo(texto,chave):
+
+def _secao_resumo(resumo: dict, chave: str):
     st.markdown("#### 📝 Resumo automático")
-    nk=f"n_frases_{chave}"
-    n=st.slider("Frases no resumo:",2,8,value=st.session_state[nk],key=f"sl_{chave}")
-    st.session_state[nk]=n
-    r=sumarizador.sumarizar(texto,n_frases=n)
-    if r["n_original"]>0:
-        comp=100-r["taxa_compressao"]
+    nk = f"n_frases_{chave}"
+    n  = st.slider("Frases no resumo:", 2, 8, value=st.session_state[nk], key=f"sl_{chave}")
+    st.session_state[nk] = n
+    if resumo["n_original"] > 0:
+        comp = 100 - resumo["taxa_compressao"]
         H(f'<div class="ej-rmeta">'
-          f'<span class="ej-chip">{r["n_original"]} → {r["n_resumo"]} frases</span>'
+          f'<span class="ej-chip">{resumo["n_original"]} → {resumo["n_resumo"]} frases</span>'
           f'<span class="ej-chip">{comp:.0f}% de compressão</span>'
           f'<span class="ej-chip">100% local</span></div>'
-          f'<div class="ej-rcard">{r["resumo"]}</div>')
+          f'<div class="ej-rcard">{resumo["resumo"]}</div>')
     else:
         st.info("Texto muito curto para sumarizar.")
 
-def _secao_ner(rel):
+
+def _secao_ner(rel: dict):
     st.markdown("#### 🔍 Entidades detectadas — NER Jurídico")
-    risco=rel["risco"];cfg=RISCO[risco]
+    risco = rel["risco"]
+    cfg   = RISCO[risco]
     H(f'<div class="ej-lgpd {cfg["css"]}">'
       f'{cfg["icon"]} &nbsp;<strong>Score LGPD: {rel["score_lgpd"]}/100</strong>'
       f' &nbsp;·&nbsp; Risco <strong>{risco}</strong>'
       f' &nbsp;·&nbsp; {rel["dados_pessoais"]} dado(s) pessoal(is)</div>')
     if rel["entidades"]:
-        cols=st.columns(2)
-        for i,(tipo_ner,vals) in enumerate(rel["entidades"].items()):
-            tag=" 🔒" if PADROES[tipo_ner]["lgpd"] else ""
-            with cols[i%2].expander(f"{tipo_ner}{tag} — {len(vals)} ocorrência(s)"):
+        cols = st.columns(2)
+        for i, (tipo_ner, vals) in enumerate(rel["entidades"].items()):
+            tag = " 🔒" if PADROES.get(tipo_ner, {}).get("lgpd", False) else ""
+            with cols[i % 2].expander(f"{tipo_ner}{tag} — {len(vals)} ocorrência(s)"):
                 for v in vals: st.code(v)
     else:
         st.info("Nenhuma entidade jurídica detectada.")
 
-def _secao_detector_lgpd(analise):
-    """Exibe o resultado completo da análise de violações LGPD."""
-    st.markdown("#### 🛡️ Detector de Violações LGPD")
 
+def _secao_detector_lgpd(analise: dict):
+    st.markdown("#### 🛡️ Detector de Violações LGPD")
     score = analise["score_conformidade"]
     nivel = analise["nivel"]
-
-    # Cor do score
-    if score >= 90:   cor_score = "#86efac"
-    elif score >= 70: cor_score = "#93c5fd"
-    elif score >= 40: cor_score = "#fde68a"
-    else:              cor_score = "#fca5a5"
-
+    cor_score = "#86efac" if score >= 90 else "#93c5fd" if score >= 70 else "#fde68a" if score >= 40 else "#fca5a5"
     nivel_css = NIVEL_CSS.get(nivel, "nivel-atencao")
-
-    # Score principal
     H(f'<div class="lgpd-score-box">'
       f'<div class="lgpd-score-num" style="color:{cor_score}">{score}</div>'
       f'<div class="lgpd-score-label">Score de Conformidade LGPD / 100</div>'
       f'<div><span class="lgpd-nivel {nivel_css}">{nivel}</span></div>'
       f'</div>')
-
-    # Contadores de violação
     if analise["total"] > 0:
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("🔴 Críticas", analise["criticas"])
         c2.metric("🟠 Altas",    analise["altas"])
         c3.metric("🟡 Médias",   analise["medias"])
         c4.metric("🟢 Baixas",   analise["baixas"])
-
         st.divider()
         st.markdown(f"**{analise['total']} violação(ões) detectada(s):**")
-
-        for v in analise["violacoes"]:
-            sev_css  = SEV_CSS.get(v.severidade, "sev-media")
-            sev_icon = SEV_ICON.get(v.severidade, "🟡")
-            H(f'<div class="viol-card">'
-              f'<div class="viol-header">'
-              f'<span class="lgpd-nivel {sev_css}">{sev_icon} {v.severidade}</span>'
-              f'<span class="viol-titulo">{v.tipo}</span>'
-              f'</div>'
-              f'<div class="viol-artigo">📖 {v.artigo}</div>'
-              f'<div class="viol-desc">{v.descricao}</div>'
-              f'<div class="viol-ev">📌 Evidência: {v.evidencia}</div>'
-              f'<div class="viol-rec">✅ Recomendação: {v.recomendacao}</div>'
-              f'</div>')
+        
+        st.markdown("**Análise Relacional por Bloco Jurídico (Context Binding):**")
+        for b in analise.get("blocos_detalhados", []):
+            with st.expander(f"⚖️ {b['tipo']} — Score do Bloco: {b['score']}/100", expanded=True):
+                for v in b["violacoes"]:
+                    sev_val  = v.severidade.value if hasattr(v.severidade, 'value') else str(v.severidade)
+                    sev_css  = SEV_CSS.get(sev_val, "sev-media")
+                    sev_icon = SEV_ICON.get(sev_val, "🟡")
+                    H(f'<div class="viol-card">'
+                      f'<div class="viol-header">'
+                      f'<span class="lgpd-nivel {sev_css}">{sev_icon} {sev_val}</span>'
+                      f'<span class="viol-titulo">{v.tipo}</span>'
+                      f'</div>'
+                      f'<div class="viol-artigo">📖 {v.artigo}</div>'
+                      f'<div class="viol-desc">{v.descricao}</div>'
+                      f'<div class="viol-ev">📌 Evidência: {v.evidencia}</div>'
+                      f'<div class="viol-rec">✅ Recomendação: {v.recomendacao}</div>'
+                      f'</div>')
     else:
         H('<div class="ej-lgpd ej-baixo">'
           '🟢 &nbsp;<strong>Nenhuma violação LGPD detectada</strong>'
           ' &nbsp;·&nbsp; Documento em conformidade com os critérios analisados.'
           '</div>')
 
-def exibir_resultado(res, chave):
-    probs,ms     = res["probs"],res["ms"]
-    texto,classe = res["texto"],res["classe"]
-    confianca    = res["confianca"]
-    info         = CLASSES_INFO[classe]
-    tipo_pdf     = res.get("tipo_pdf")
 
-    if   tipo_pdf=="escaneado": badge='<span class="ej-badge ej-bocr">📷 OCR aplicado</span>'
-    elif tipo_pdf=="digital":   badge='<span class="ej-badge ej-bdig">📄 PDF digital</span>'
-    else:                        badge=""
+def exibir_resultado(res, chave: str):
+    """Exibe o resultado completo de uma análise."""
+    classe    = res.classe
+    confianca = res.confianca
+    info      = CLASSES_INFO[classe]
+
+    if   res.tipo_extracao == "escaneado": badge = '<span class="ej-badge ej-bocr">📷 OCR aplicado</span>'
+    elif res.tipo_extracao == "digital":   badge = '<span class="ej-badge ej-bdig">📄 PDF digital</span>'
+    else:                                   badge = ""
 
     H(f'<div class="ej-res">'
       f'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">'
@@ -387,24 +344,24 @@ def exibir_resultado(res, chave):
       f'<div style="text-align:right">'
       f'<div class="ej-conf" style="color:{info["cor"]}">{confianca:.1f}%</div>'
       f'<div style="font-size:.72rem;color:#7d8fa3">de confiança</div></div></div>'
-      f'<div class="ej-meta">⚡ {ms:.3f} ms &nbsp;·&nbsp; TFLite INT8 &nbsp;·&nbsp; Edge AI'
-      f'{res.get("chars_extra","")}</div></div>')
+      f'<div class="ej-meta">⚡ {res.ms_inferencia:.3f} ms &nbsp;·&nbsp; TFLite INT8 &nbsp;·&nbsp; Edge AI'
+      f'{res.chars_extra}</div></div>')
 
     with st.expander("📊 Probabilidades por classe", expanded=True):
-        _barras(probs, classe)
+        _barras(res.probabilidades, classe)
 
     st.divider()
-    _secao_resumo(texto, chave)
+    _secao_resumo(res.resumo, chave)
     st.divider()
-    _secao_ner(res["rel_ner"])
+    _secao_ner(res.relatorio_ner)
     st.divider()
-    _secao_detector_lgpd(res["analise_lgpd"])
+    _secao_detector_lgpd(res.analise_lgpd)
     st.divider()
 
     pdf_bytes = gerar_relatorio(
-        texto=texto, classe=classe, confianca=confianca,
-        probabilidades=res["probs_dict"], relatorio_ner=res["rel_ner"],
-        ms_inferencia=ms, nome_doc=res["nome_doc"],
+        texto=res.texto, classe=classe, confianca=confianca,
+        probabilidades=res.probabilidades, relatorio_ner=res.relatorio_ner,
+        ms_inferencia=res.ms_inferencia, nome_doc=res.nome_doc,
     )
     st.download_button(
         label="📥 Baixar relatório PDF", data=pdf_bytes,
@@ -419,10 +376,10 @@ H("""
   <p class="ej-sub">Classificação inteligente de documentos jurídicos — 100% local, sem envio de dados à nuvem</p>
   <span class="ej-tag">TFLite INT8</span>
   <span class="ej-tag">OCR Tesseract 5</span>
-  <span class="ej-tag">NER Jurídico v2.3</span>
+  <span class="ej-tag">NER Jurídico v2.9</span>
   <span class="ej-tag">Score LGPD</span>
   <span class="ej-tag">Detector LGPD</span>
-  <span class="ej-tag">Edge AI</span>
+  <span class="ej-tag">Clean Architecture</span>
 </div>
 """)
 
@@ -455,7 +412,7 @@ with aba_pdf:
             help="Recomendado até 20 MB",
         )
         modo = st.radio(
-            "Modo de análise:", ["Documento completo","Página por página"],
+            "Modo de análise:", ["Documento completo", "Página por página"],
             horizontal=True,
         )
         btn_analisar = st.button(
@@ -470,76 +427,76 @@ with aba_pdf:
         if btn_analisar and arquivo:
             if modo == "Documento completo":
                 with st.spinner("Detectando tipo de PDF…"):
-                    tipo = detectar_tipo_pdf(arquivo); arquivo.seek(0)
+                    tipo = analisar_pdf_uc.detectar_tipo(arquivo)
+                    arquivo.seek(0)
                 if tipo == "escaneado":
                     st.warning("📷 PDF escaneado — aplicando OCR…")
                 else:
                     st.success("📄 PDF digital — extração direta.")
-                with st.spinner("Aplicando OCR…" if tipo=="escaneado" else "Extraindo texto…"):
-                    texto_pdf, tipo_det, stats = _extrair_smart(arquivo)
-                if tipo == "escaneado":
-                    st.caption(f"📷 {stats['paginas']} pág. · {stats['paginas_com_texto']} com texto")
-                if len(texto_pdf.strip()) < 20:
-                    st.error("❌ Não foi possível extrair texto suficiente.")
-                    st.session_state["resultado_pdf"] = None
-                else:
-                    with st.spinner("Classificando, detectando entidades e analisando LGPD…"):
-                        st.session_state["resultado_pdf"] = _processar(
-                            texto_pdf, arquivo.name, tipo_det,
-                            f" · {len(texto_pdf):,} chars · {stats['metodo']}",
+                try:
+                    com_spinner = "Aplicando OCR…" if tipo == "escaneado" else "Extraindo texto…"
+                    with st.spinner(com_spinner):
+                        resultado = analisar_pdf_uc.executar_completo(
+                            arquivo, arquivo.name,
+                            n_frases=st.session_state["n_frases_pdf"],
                         )
+                    st.session_state["resultado_pdf"] = resultado
                     with st.expander("📄 Pré-visualizar texto extraído"):
-                        st.text_area("", texto_pdf[:3000]+("…" if len(texto_pdf)>3000 else ""),
+                        t = resultado.texto
+                        st.text_area("", t[:3000] + ("…" if len(t) > 3000 else ""),
                                      height=200, disabled=True)
+                except Exception as exc:
+                    st.error(f"❌ {exc}")
+                    st.session_state["resultado_pdf"] = None
             else:
                 with st.spinner("Analisando página por página…"):
-                    resultados, tipo = _paginas_smart(arquivo)
+                    resultados_pag = analisar_pdf_uc.executar_por_pagina(arquivo, arquivo.name)
                 st.session_state["resultado_pdf"] = None
-                if not resultados:
+                if not resultados_pag:
                     st.error("❌ Nenhuma página com texto detectável.")
                 else:
-                    st.success(f"✅ {len(resultados)} página(s) · {'📷 OCR' if tipo=='escaneado' else '📄 Digital'}")
+                    tipo = resultados_pag[0]["resultado"].tipo_extracao or "digital"
+                    st.success(f"✅ {len(resultados_pag)} página(s) · {'📷 OCR' if tipo=='escaneado' else '📄 Digital'}")
                     contagem = {}
-                    for r in resultados:
-                        contagem[r["classe"]] = contagem.get(r["classe"],0)+1
+                    for r in resultados_pag:
+                        cls = r["resultado"].classe
+                        contagem[cls] = contagem.get(cls, 0) + 1
                     st.markdown("**Distribuição por classe:**")
                     cols_d = st.columns(len(contagem))
-                    for col,(cls,qtd) in zip(cols_d,sorted(contagem.items(),key=lambda x:-x[1])):
-                        col.metric(f"{CLASSES_INFO[cls]['emoji']} {cls.upper()}",f"{qtd} pág.")
+                    for col, (cls, qtd) in zip(cols_d, sorted(contagem.items(), key=lambda x: -x[1])):
+                        col.metric(f"{CLASSES_INFO[cls]['emoji']} {cls.upper()}", f"{qtd} pág.")
                     st.divider()
-                    for r in resultados:
-                        inf = CLASSES_INFO[r["classe"]]
-                        with st.expander(f"Página {r['pagina']} — {inf['emoji']} {r['classe'].upper()} ({r['confianca']:.0f}%)"):
-                            st.progress(r["confianca"]/100, text=f"{r['confianca']:.1f}%")
-                            rel_p = ner.relatorio(r["texto"])
-                            al_p  = detector_lgpd.analisar(r["texto"], rel_p, r["classe"])
-                            cfg   = RISCO[rel_p["risco"]]
-                            nivel_css = NIVEL_CSS.get(al_p["nivel"],"nivel-atencao")
+                    for item in resultados_pag:
+                        res_p = item["resultado"]
+                        inf   = CLASSES_INFO[res_p.classe]
+                        with st.expander(f"Página {item['pagina']} — {inf['emoji']} {res_p.classe.upper()} ({res_p.confianca:.0f}%)"):
+                            st.progress(res_p.confianca / 100, text=f"{res_p.confianca:.1f}%")
+                            cfg      = RISCO[res_p.relatorio_ner["risco"]]
+                            nivel_css = NIVEL_CSS.get(res_p.analise_lgpd["nivel"], "nivel-atencao")
                             H(f'<div class="ej-lgpd {cfg["css"]}" style="font-size:.8rem">'
-                              f'{cfg["icon"]} Score NER: <strong>{rel_p["score_lgpd"]}/100</strong>'
+                              f'{cfg["icon"]} Score NER: <strong>{res_p.relatorio_ner["score_lgpd"]}/100</strong>'
                               f' &nbsp;·&nbsp; Conformidade: '
                               f'<span class="lgpd-nivel {nivel_css}" style="font-size:.7rem">'
-                              f'{al_p["score_conformidade"]}/100 {al_p["nivel"]}</span>'
-                              f' &nbsp;·&nbsp; {al_p["total"]} violação(ões)</div>')
-                            res_p = sumarizador.sumarizar(r["texto"], n_frases=2)
-                            if res_p["n_original"] > 0:
+                              f'{res_p.analise_lgpd["score_conformidade"]}/100 {res_p.analise_lgpd["nivel"]}</span>'
+                              f' &nbsp;·&nbsp; {res_p.analise_lgpd["total"]} violação(ões)</div>')
+                            if res_p.resumo.get("n_original", 0) > 0:
                                 st.markdown("**Resumo:**")
-                                H(f'<div class="ej-rcard" style="font-size:.84rem">{res_p["resumo"]}</div>')
-                            pd_pag = {encoder.classes_[i]: float(r["probs"][i]) for i in range(len(r["probs"]))}
-                            pdf_p  = gerar_relatorio(
-                                texto=r["texto"], classe=r["classe"], confianca=r["confianca"],
-                                probabilidades=pd_pag, relatorio_ner=rel_p, ms_inferencia=r["ms"],
-                                nome_doc=f"{arquivo.name} — Página {r['pagina']}",
+                                H(f'<div class="ej-rcard" style="font-size:.84rem">{res_p.resumo["resumo"]}</div>')
+                            pdf_p = gerar_relatorio(
+                                texto=res_p.texto, classe=res_p.classe, confianca=res_p.confianca,
+                                probabilidades=res_p.probabilidades, relatorio_ner=res_p.relatorio_ner,
+                                ms_inferencia=res_p.ms_inferencia,
+                                nome_doc=f"{arquivo.name} — Página {item['pagina']}",
                             )
                             st.download_button(
-                                label=f"📥 Relatório página {r['pagina']}", data=pdf_p,
-                                file_name=f"relatorio_p{r['pagina']}_{r['classe']}.pdf",
-                                mime="application/pdf", key=f"dl_p_{r['pagina']}",
+                                label=f"📥 Relatório página {item['pagina']}", data=pdf_p,
+                                file_name=f"relatorio_p{item['pagina']}_{res_p.classe}.pdf",
+                                mime="application/pdf", key=f"dl_p_{item['pagina']}",
                             )
 
-        if st.session_state["resultado_pdf"] is not None and modo=="Documento completo":
+        if st.session_state["resultado_pdf"] is not None and modo == "Documento completo":
             exibir_resultado(st.session_state["resultado_pdf"], chave="pdf")
-        elif not btn_analisar and st.session_state["resultado_pdf"] is None and modo=="Documento completo":
+        elif not btn_analisar and st.session_state["resultado_pdf"] is None and modo == "Documento completo":
             st.info("👈 Carregue um PDF para começar — digital ou escaneado.")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -558,7 +515,7 @@ with aba_texto:
                 st.rerun()
         texto = st.text_area(
             "Texto jurídico",
-            value=st.session_state.get("texto_input",""),
+            value=st.session_state.get("texto_input", ""),
             height=240,
             placeholder="Cole ou digite aqui um trecho de documento jurídico…",
             label_visibility="collapsed",
@@ -568,13 +525,18 @@ with aba_texto:
             st.caption(f"📏 {n_chars:,} caracteres · {len(texto.split()):,} palavras")
         btn_cls = st.button(
             "🔍 Classificar, resumir, extrair entidades e analisar LGPD",
-            type="primary", use_container_width=True, disabled=(n_chars<10),
+            type="primary", use_container_width=True, disabled=(n_chars < 10),
         )
     with col_d2:
         st.subheader("🎯 Resultado")
         if btn_cls and n_chars >= 10:
             with st.spinner("Processando e analisando conformidade LGPD…"):
-                st.session_state["resultado_texto"] = _processar(texto, "Texto digitado")
+                dto = DocumentoInputDTO(
+                    texto=texto,
+                    nome="Texto digitado",
+                    n_frases_resumo=st.session_state["n_frases_texto"],
+                )
+                st.session_state["resultado_texto"] = analisar_doc_uc.executar(dto)
         if st.session_state.get("resultado_texto") is not None:
             exibir_resultado(st.session_state["resultado_texto"], chave="texto")
         elif not btn_cls:
@@ -593,9 +555,10 @@ with aba_sobre:
 - Vetorização: TF-IDF bigramas
 - Classificação: Dense NN · TFLite INT8
 - Resumo: Sumarização extrativa TF-IDF
-- NER: Regex jurídico v2.3
+- NER: Regex jurídico v2.9 (CPF validado)
 - Detector LGPD: 9 regras jurídicas
 - Relatório: ReportLab PDF
+- **Arquitetura: Clean Architecture / DDD**
         """)
     with c2:
         st.markdown("#### 📂 Classes detectadas")
