@@ -20,3 +20,11 @@ models/*.keras
 .vscode/
 .idea/
 .DS_Store
+
+# Streamlit & Testes
+.streamlit/
+.pytest_cache/
+htmlcov/
+*.log
+pyright_out.txt
+.pyre/

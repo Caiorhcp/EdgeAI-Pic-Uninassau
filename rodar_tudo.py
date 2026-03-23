@@ -7,7 +7,13 @@ import subprocess
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"]  = "2"
 
-PYTHON  = sys.executable
+import os
+if os.path.exists("venv/Scripts/python.exe"):
+    PYTHON = "venv/Scripts/python.exe"
+elif os.path.exists("venv/bin/python"):
+    PYTHON = "venv/bin/python"
+else:
+    PYTHON = sys.executable
 VERDE   = "\033[92m"
 AMARELO = "\033[93m"
 VERMELHO= "\033[91m"
