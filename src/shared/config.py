@@ -33,17 +33,17 @@ MODEL_PRUNED_PATH  = TFLITE_DIR / "modelo_pruned_final.tflite"
 GRAFICO_TREINO_PATH = MODELS_DIR / "grafico_treinamento.png"
 
 # ─── Hiperparâmetros de pré-processamento ─────────────────────────────────────
-TFIDF_MAX_FEATURES = 3000
-TFIDF_NGRAM_RANGE  = (1, 2)
-TFIDF_MIN_DF       = 1
+TFIDF_MAX_FEATURES = 8000
+TFIDF_NGRAM_RANGE  = (1, 3)
+TFIDF_MIN_DF       = 2
 TFIDF_SUBLINEAR_TF = True
 
 # ─── Hiperparâmetros de treino ────────────────────────────────────────────────
 RANDOM_SEED        = 42
 TEST_SIZE          = 0.2
 TRAIN_BATCH_SIZE   = 32          # Era 8 — alterado para convergência mais estável
-TRAIN_EPOCHS       = 150
-EARLY_STOPPING_PATIENCE = 20
+TRAIN_EPOCHS       = 200
+EARLY_STOPPING_PATIENCE = 25
 EARLY_STOPPING_MONITOR  = "val_accuracy"
 
 # ─── Hiperparâmetros do quantizador INT8 ─────────────────────────────────────

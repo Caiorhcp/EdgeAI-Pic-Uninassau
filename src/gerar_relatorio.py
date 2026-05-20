@@ -166,45 +166,66 @@ def gerar_relatorio(
     historia.append(tabela_clf)
     historia.append(Spacer(1, 0.3*cm))
 
-    # Probabilidades por classe
-    historia.append(Paragraph("Probabilidades por classe:", corpo))
-    prob_ordenadas = sorted(probabilidades.items(), key=lambda x: -x[1])
-    dados_prob = [["Classe", "Probabilidade", "Barra"]]
-    for cls, prob in prob_ordenadas:
-        barra    = "█" * int(prob * 20) + "░" * (20 - int(prob * 20))
-        destaque = " ◄" if cls == classe else ""
-        dados_prob.append([
-            f"{cls.upper()}{destaque}",
-            f"{prob*100:.1f}%",
-            barra,
-        ])
+    # Probabilidades por classe (Gráfico Dinâmico Injectado via RAM)
+    historia.append(Paragraph("Probabilidades por classe (Gráfico de Confiança):", corpo))
+    
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(7, 2.2), facecolor='white')
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_color('#dee2e6')
 
-    tabela_prob = Table(dados_prob, colWidths=[4*cm, 3*cm, largura - 7*cm])
-    tabela_prob.setStyle(TableStyle([
-        ("BACKGROUND",     (0, 0), (-1, 0), AZUL_ESCURO),
-        ("TEXTCOLOR",      (0, 0), (-1, 0), colors.white),
-        ("FONTNAME",       (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE",       (0, 0), (-1, 0), 9),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, CINZA_CLARO]),
-        ("FONTNAME",       (0, 1), (-1, -1), "Helvetica"),
-        ("FONTSIZE",       (0, 1), (-1, -1), 9),
-        ("FONTNAME",       (2, 1), (2, -1), "Courier"),
-        ("TEXTCOLOR",      (2, 1), (2, -1), AZUL_MED),
-        ("GRID",           (0, 0), (-1, -1), 0.5, CINZA_MED),
-        ("PADDING",        (0, 0), (-1, -1), 5),
-        ("VALIGN",         (0, 0), (-1, -1), "MIDDLE"),
-    ]))
-    historia.append(tabela_prob)
+    prob_ordenadas = sorted(probabilidades.items(), key=lambda x: -x[1])
+    nomes_cls = [c[0].upper() for c in prob_ordenadas]
+    valores_prob = [c[1] * 100 for c in prob_ordenadas]
+    
+    plt_cores = {"lgpd": "#8e44ad", "acordao": "#2980b9", "contrato": "#27ae60", "peticao": "#e67e22", "outro": "#7f8c8d"}
+    cores_plot = [plt_cores.get(c[0], "#7f8c8d") for c in prob_ordenadas]
+
+    bars = ax.barh(nomes_cls, valores_prob, color=cores_plot, height=0.6)
+    ax.invert_yaxis()
+    
+    for bar in bars:
+        ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2, 
+                f'{bar.get_width():.1f}%', va='center', ha='left', fontsize=9, fontweight='bold', color='#555555')
+                
+    ax.set_xlim(0, 105)
+    ax.xaxis.grid(True, linestyle='--', alpha=0.3)
+    ax.tick_params(axis='y', length=0, labelsize=9)
+    ax.tick_params(axis='x', colors='#555555', labelsize=8)
+    
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png', dpi=200, bbox_inches='tight')
+    plt.close()
+    buf.seek(0)
+    
+    from reportlab.platypus import Image
+    grafico_img = Image(buf, width=15*cm, height=4.7*cm)
+    historia.append(grafico_img)
     historia.append(Spacer(1, 0.4*cm))
 
     # ── 3. Score LGPD e entidades ─────────────────────────────────────────────
-    historia.append(Paragraph("3. Análise LGPD e Entidades Detectadas", secao))
+    historia.append(Paragraph("3. Análise LGPD e Parecer Executivo", secao))
 
     risco     = relatorio_ner["risco"]
     score     = relatorio_ner["score_lgpd"]
     n_pessoais = relatorio_ner["dados_pessoais"]
     n_total   = relatorio_ner["total_entidades"]
     cor_risco = CORES_RISCO.get(risco, CINZA_MED)
+    
+    # Gerar Resumo Executivo Dinâmico
+    if risco == "ALTO":
+        parecer = "<b>ALERTA CRÍTICO:</b> O documento possui uma alta concentração de dados pessoais (como CPFs, RGs ou similares). A Lei Geral de Proteção de Dados (LGPD) exige que este documento seja mantido em sigilo estrutural ou que sofra anonimização (tarja) antes de publicações ou compartilhamentos."
+    elif risco == "MÉDIO":
+        parecer = "<b>ALERTA MODERADO:</b> Foi detectada a presença de alguns dados de identificação. Verifique se o contexto de uso requer anonimização de partes das entidades sensíveis sob as diretrizes da LGPD."
+    else:
+        parecer = "<b>RISCO BAIXO:</b> Nenhuma concentração significativa de dados pessoais foi detectada. O tráfego e armazenamento deste documento apresenta baixo risco à privacidade das partes associadas, condizendo com segurança padrão."
+        
+    historia.append(Paragraph(parecer, ParagraphStyle("parecer", fontSize=9, fontName="Helvetica", textColor=cor_risco, backColor=CINZA_CLARO, borderPad=6, borderWidth=1, borderColor=cor_risco, leading=14)))
+    historia.append(Spacer(1, 0.4*cm))
 
     dados_lgpd = [
         ["Score LGPD", "Nível de Risco", "Dados Pessoais", "Total de Entidades"],

@@ -1,37 +1,37 @@
 {
   "modelos": {
     "SVM Linear": {
-      "acuracia_pct": 92.96,
-      "latencia_ms": 0.0108,
-      "tamanho_kb": 117.8
+      "acuracia_pct": 94.05,
+      "latencia_ms": 0.018,
+      "tamanho_kb": 196.0
     },
     "SVM RBF": {
-      "acuracia_pct": 91.9,
-      "latencia_ms": 2.5703,
-      "tamanho_kb": 41336.8
+      "acuracia_pct": 92.28,
+      "latencia_ms": 9.1886,
+      "tamanho_kb": 126756.1
     },
     "Reg. Logística": {
-      "acuracia_pct": 88.7,
-      "latencia_ms": 0.0068,
-      "tamanho_kb": 117.9
+      "acuracia_pct": 90.52,
+      "latencia_ms": 0.0111,
+      "tamanho_kb": 196.1
     },
     "Naive Bayes": {
-      "acuracia_pct": 85.71,
-      "latencia_ms": 0.0123,
-      "tamanho_kb": 235.0
+      "acuracia_pct": 85.67,
+      "latencia_ms": 0.0118,
+      "tamanho_kb": 391.3
     },
     "Edge AI (TFLite INT8)": {
-      "acuracia_pct": 92.11,
-      "latencia_ms": 0.0065,
-      "tamanho_kb": 193.1
+      "acuracia_pct": 94.16,
+      "latencia_ms": 0.0101,
+      "tamanho_kb": 318.8
     }
   },
   "conclusao": {
     "melhor_baseline": "SVM Linear",
-    "acc_melhor_baseline": 92.96,
-    "acc_edge_ai": 92.11,
-    "diferenca_pp": -0.85,
-    "speedup_latencia": 1.7,
+    "acc_melhor_baseline": 94.05,
+    "acc_edge_ai": 94.16,
+    "diferenca_pp": 0.11,
+    "speedup_latencia": 1.8,
     "reducao_tamanho_x": 0.6
   }
 }

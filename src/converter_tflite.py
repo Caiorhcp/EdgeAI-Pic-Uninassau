@@ -121,10 +121,10 @@ print(f"  Inferências por segundo   : {1000/ms_por_inferencia:.0f}")
 
 # ─── 6. Resumo final ─────────────────────────────────────────────────────────
 print("\n" + "="*50)
-print("RESUMO — Modelos gerados:")
+print("RESUMO - Modelos gerados:")
 print(f"  Keras  (treino) : {tamanho_original:.1f} KB")
 print(f"  TFLite (base)   : {tamanho_tflite:.1f} KB")
-print(f"  TFLite (INT8)   : {tamanho_q:.1f} KB  ← deploy no edge")
+print(f"  TFLite (INT8)   : {tamanho_q:.1f} KB  <- deploy no edge")
 print(f"  Velocidade      : {ms_por_inferencia:.2f} ms/inferência")
 print("="*50)
 print("\nArquivos prontos para deploy em models/tflite/")

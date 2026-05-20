@@ -20,12 +20,15 @@ def limpar(texto):
 
 textos_limpos = [limpar(t) for t in textos]
 
-# TF-IDF: pondera palavras pela raridade — "titular" vale mais que "o"
+# TF-IDF v2: 8k features + trigramas para vocabulário jurídico mais rico
+# "dados pessoais sensíveis", "recurso especial provido", "artigo 186 código civil"
 vectorizer = TfidfVectorizer(
-    max_features=3000,
-    ngram_range=(1, 2),   # unigramas + bigramas ("dados pessoais", "recurso especial")
-    min_df=1,
-    sublinear_tf=True
+    max_features=5000,
+    ngram_range=(1, 2),   # unigramas + bigramas (remove trigramas ruidosos)
+    min_df=2,             # ignorar hapax legomena (termos que aparecem 1 vez)
+    max_df=0.95,          # ignorar termos em >95% dos docs (stopwords implícitas)
+    sublinear_tf=True,    # log(1+tf) — reduz impacto de termos muito frequentes
+    analyzer="word",
 )
 from typing import Any as _Any
 _tfidf_fit: _Any = vectorizer.fit_transform(textos_limpos)

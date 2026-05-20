@@ -9,6 +9,7 @@ from src.domain.services.lgpd_service import LGPDService
 from src.infrastructure.nlp.ner_juridico import NERJuridico
 from src.infrastructure.nlp.sumarizador import SumarizadorJuridico
 from src.infrastructure.nlp.segmentador_juridico import SegmentadorJuridico
+from src.infrastructure.nlp.metadados_extrator import MetadadosExtrator
 from src.shared.exceptions import DocumentoVazioError
 from src.shared.logger import get_logger
 
@@ -35,15 +36,18 @@ class AnalisarDocumentoUseCase:
         ner:           NERJuridico | None         = None,
         sumarizador:   SumarizadorJuridico | None = None,
         lgpd_service:  LGPDService | None         = None,
+        metadados_extrator: MetadadosExtrator | None = None,
     ):
         self._classificador = classificador
         _ner:         NERJuridico       = ner          or NERJuridico()
         _sumarizador: SumarizadorJuridico = sumarizador or SumarizadorJuridico()
         _lgpd:        LGPDService       = lgpd_service or LGPDService()
+        _meta_ext:    MetadadosExtrator = metadados_extrator or MetadadosExtrator()
         self._segmentador = SegmentadorJuridico()
         self._ner         = _ner
         self._sumarizador = _sumarizador
         self._lgpd        = _lgpd
+        self._meta_ext    = _meta_ext
 
     def executar(self, dto: DocumentoInputDTO) -> ResultadoOutputDTO:
         """
@@ -114,6 +118,9 @@ class AnalisarDocumentoUseCase:
             len(blocos)
         )
 
+        # 5. Extração de Metadados do Arquivo
+        metadados_arquivo = self._meta_ext.extrair(documento.texto)
+
         return ResultadoOutputDTO(
             classificacao=resultado_clf,
             resumo=resumo,
@@ -122,4 +129,5 @@ class AnalisarDocumentoUseCase:
             texto=documento.texto,
             nome_doc=documento.nome,
             tipo_extracao=documento.tipo_extracao,
+            metadados_arquivo=metadados_arquivo,
         )

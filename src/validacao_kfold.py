@@ -11,6 +11,20 @@ import numpy as np
 import pickle
 import json
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
+plt.rcParams.update({
+    "figure.facecolor": "#fcfcfc",
+    "axes.facecolor": "#ffffff",
+    "axes.edgecolor": "#e0e0e0",
+    "axes.grid": True,
+    "grid.color": "#f0f0f0",
+    "text.color": "#333333",
+    "xtick.color": "#555555",
+    "ytick.color": "#555555",
+    "font.family": "sans-serif",
+    "axes.titlesize": 12,
+    "axes.titleweight": "bold",
+})
 import tensorflow as tf
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import (

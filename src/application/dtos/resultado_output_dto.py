@@ -20,6 +20,7 @@ class ResultadoOutputDTO(BaseModel):
     texto:           str
     nome_doc:        str = "Documento"
     tipo_extracao:   Optional[str] = None
+    metadados_arquivo: Optional[Dict[str, Any]] = None
 
     # ─── Atalhos para conveniência do app.py ──────────────────────────────────
     @property

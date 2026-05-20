@@ -213,14 +213,21 @@ def coletar_stj_api() -> list:
     termos_busca = [
         "dano moral", "responsabilidade civil",
         "recurso especial", "prescrição",
-        "proteção de dados", "LGPD"
+        "proteção de dados", "LGPD",
+        "habeas corpus", "mandado de segurança",
+        "direito do consumidor", "relação de emprego",
+        "indenização", "coisa julgada",
+        "boa-fé objetiva", "enriquecimento ilícito",
+        "dano existencial", "súmula vinculante",
+        "repercussão geral", "recurso repetitivo",
+        "tutela antecipada", "seguro obrigatório",
     ]
 
     for termo in termos_busca:
         url = (
             "https://jurisprudencia.stj.jus.br/docs/api/search"
             f"?query={quote(termo)}"
-            "&rows=15&start=0"
+            "&rows=20&start=0"
             "&tipo=acordao"
         )
         try:
@@ -265,14 +272,18 @@ def coletar_stf_api() -> list:
     termos_busca = [
         "direitos fundamentais", "inconstitucionalidade",
         "habeas corpus", "mandado de segurança",
-        "proteção de dados pessoais"
+        "proteção de dados pessoais",
+        "princípio da dignidade", "due process of law",
+        "proporcionalidade", "razoabilidade",
+        "ação direta", "repercussão geral",
+        "cláusula pétrea", "recurso extraordinário",
     ]
 
     for termo in termos_busca:
         url = (
             "https://jurisprudencia.stf.jus.br/api/search/search"
             f"?query={quote(termo)}"
-            "&pageSize=10&page=1"
+            "&pageSize=15&page=1"
         )
         try:
             resp = requests.get(url, headers=HEADERS, timeout=15)
@@ -296,16 +307,189 @@ def coletar_stf_api() -> list:
     return registros
 
 
+# ─── 7. Código de Defesa do Consumidor ────────────────────────────────────────
+def coletar_cdc() -> list:
+    """
+    Extrai artigos do CDC (Lei 8.078/1990) — classes contrato e peticao.
+    """
+    print("Coletando CDC (Lei 8.078/1990)...")
+    url = "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm"
+    registros = []
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for p in soup.find_all("p"):
+            texto = limpar_texto(p.get_text())
+            if 60 <= len(texto) <= 450:
+                termos_contrato = ["fornecedor", "consumidor", "produto", "serviço",
+                                   "contrato", "cláusula", "garantia", "vício"]
+                termos_peticao  = ["indenização", "dano", "responsabilidade",
+                                   "direito", "ação", "reparação"]
+                if any(k in texto.lower() for k in termos_contrato):
+                    registros.append({"texto": texto, "classe": "contrato",
+                                     "fonte": "Planalto - CDC/1990"})
+                elif any(k in texto.lower() for k in termos_peticao):
+                    registros.append({"texto": texto, "classe": "peticao",
+                                     "fonte": "Planalto - CDC/1990"})
+        time.sleep(DELAY)
+    except Exception as e:
+        print(f"  Erro CDC: {e}")
+
+    print(f"  CDC/1990: {len(registros)} trechos coletados")
+    return registros
+
+
+# ─── 8. CLT — Direito do Trabalho ────────────────────────────────────────────
+def coletar_clt() -> list:
+    """
+    Extrai artigos da CLT (Decreto-Lei 5.452/1943) — classes peticao e outro.
+    """
+    print("Coletando CLT (Decreto-Lei 5.452/1943)...")
+    url = "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm"
+    registros = []
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for p in soup.find_all("p"):
+            texto = limpar_texto(p.get_text())
+            if 60 <= len(texto) <= 450:
+                termos_peticao = ["empregado", "empregador", "rescisão", "aviso prévio",
+                                  "fgts", "jornada", "salário", "horas extras"]
+                termos_outros  = ["contrato de trabalho", "sindicato", "convenção coletiva",
+                                  "dissídio", "greve", "negociação"]
+                if any(k in texto.lower() for k in termos_peticao):
+                    registros.append({"texto": texto, "classe": "peticao",
+                                     "fonte": "Planalto - CLT"})
+                elif any(k in texto.lower() for k in termos_outros):
+                    registros.append({"texto": texto, "classe": "outro",
+                                     "fonte": "Planalto - CLT"})
+        time.sleep(DELAY)
+    except Exception as e:
+        print(f"  Erro CLT: {e}")
+
+    print(f"  CLT: {len(registros)} trechos coletados")
+    return registros
+
+
+# ─── 9. Código Penal — artigos relevantes ────────────────────────────────────
+def coletar_codigo_penal() -> list:
+    """
+    Extrai artigos do Código Penal (Decreto-Lei 2.848/1940) — classe outro.
+    """
+    print("Coletando Código Penal...")
+    url = "https://www.planalto.gov.br/ccivil_03/decreto-lei/del2848compilado.htm"
+    registros = []
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for p in soup.find_all("p"):
+            texto = limpar_texto(p.get_text())
+            if 60 <= len(texto) <= 450:
+                palavras = ["pena", "crime", "delito", "réu", "condenado",
+                            "reclusão", "detenção", "dolo", "culpa", "tipificação"]
+                if any(k in texto.lower() for k in palavras):
+                    registros.append({"texto": texto, "classe": "outro",
+                                     "fonte": "Planalto - CP"})
+        time.sleep(DELAY)
+    except Exception as e:
+        print(f"  Erro CP: {e}")
+
+    print(f"  CP: {len(registros)} trechos coletados")
+    return registros
+
+
+# ─── 10. ECA — Estatuto da Criança e do Adolescente ──────────────────────────
+def coletar_eca() -> list:
+    """
+    Extrai artigos do ECA (Lei 8.069/1990) — classes peticao e outro.
+    """
+    print("Coletando ECA (Lei 8.069/1990)...")
+    url = "https://www.planalto.gov.br/ccivil_03/leis/l8069.htm"
+    registros = []
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for p in soup.find_all("p"):
+            texto = limpar_texto(p.get_text())
+            if 60 <= len(texto) <= 450:
+                palavras = ["criança", "adolescente", "menor", "tutela",
+                            "guarda", "adoção", "alimentos", "proteção integral"]
+                if any(k in texto.lower() for k in palavras):
+                    # LGPD se mencionar dados de criança
+                    if any(k in texto.lower() for k in ["dado", "informação", "privacidade"]):
+                        registros.append({"texto": texto, "classe": "lgpd",
+                                         "fonte": "Planalto - ECA"})
+                    else:
+                        registros.append({"texto": texto, "classe": "outro",
+                                         "fonte": "Planalto - ECA"})
+        time.sleep(DELAY)
+    except Exception as e:
+        print(f"  Erro ECA: {e}")
+
+    print(f"  ECA: {len(registros)} trechos coletados")
+    return registros
+
+
+# ─── 11. Lei de Acesso à Informação ──────────────────────────────────────────
+def coletar_lai() -> list:
+    """
+    Extrai artigos da LAI (Lei 12.527/2011) — classes lgpd e outro.
+    """
+    print("Coletando LAI (Lei 12.527/2011)...")
+    url = "https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/lei/l12527.htm"
+    registros = []
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for p in soup.find_all("p"):
+            texto = limpar_texto(p.get_text())
+            if 60 <= len(texto) <= 450:
+                palavras_lgpd    = ["informação", "dados", "sigilo", "acesso",
+                                   "transparência", "privacidade"]
+                palavras_outros  = ["órgão", "entidade", "administração",
+                                   "público", "governo"]
+                if any(k in texto.lower() for k in palavras_lgpd):
+                    registros.append({"texto": texto, "classe": "lgpd",
+                                     "fonte": "Planalto - LAI/2011"})
+                elif any(k in texto.lower() for k in palavras_outros):
+                    registros.append({"texto": texto, "classe": "outro",
+                                     "fonte": "Planalto - LAI/2011"})
+        time.sleep(DELAY)
+    except Exception as e:
+        print(f"  Erro LAI: {e}")
+
+    print(f"  LAI: {len(registros)} trechos coletados")
+    return registros
+
+
 # ─── Pipeline principal ───────────────────────────────────────────────────────
 def main():
     print("=" * 56)
-    print("Coleta de dados jurídicos públicos")
+    print("Coleta expandida de dados jurídicos públicos")
     print("Fontes: Planalto, STJ, STF — domínio público")
+    print("Meta: 300+ amostras por classe")
     print("=" * 56)
 
     os.makedirs("data/raw", exist_ok=True)
 
     todos = []
+
+    # ─── Fontes originais ──────────────────────────────────────────────────
     todos += coletar_lgpd()
     todos += coletar_constituicao()
     todos += coletar_codigo_civil()
@@ -313,7 +497,14 @@ def main():
     todos += coletar_stj_api()
     todos += coletar_stf_api()
 
-    print(f"\nTotal coletado: {len(todos)} registros")
+    # ─── Novas fontes ──────────────────────────────────────────────────────
+    todos += coletar_cdc()
+    todos += coletar_clt()
+    todos += coletar_codigo_penal()
+    todos += coletar_eca()
+    todos += coletar_lai()
+
+    print(f"\nTotal coletado nesta rodada: {len(todos)} registros")
 
     # Salvar e reportar
     adicionados = salvar_dataset(todos)
@@ -322,21 +513,23 @@ def main():
     with open("data/raw/dataset_juridico.json", "r", encoding="utf-8") as f:
         dataset = json.load(f)
 
-    contagem = {}
+    contagem: dict = {}
     for item in dataset:
         contagem[item["classe"]] = contagem.get(item["classe"], 0) + 1
 
     print(f"Adicionados ao dataset: {adicionados} novos registros")
     print(f"Total no dataset agora: {len(dataset)}")
     print("\nDistribuição por classe:")
+    meta = 200
     for classe, qtd in sorted(contagem.items()):
-        barra = "█" * (qtd // 5)
-        status = "✅" if qtd >= 100 else "⚠️" if qtd >= 50 else "❌"
+        barra  = "█" * (qtd // 10)
+        status = "✅" if qtd >= meta else "⚠️" if qtd >= meta // 2 else "❌"
         print(f"  {status} {classe:10s}: {qtd:4d} {barra}")
 
-    print("\nMeta para artigo: 100+ amostras por classe")
+    print(f"\nMeta para artigo: {meta}+ amostras por classe")
     print("Dataset salvo em data/raw/dataset_juridico.json")
-    print("\nPróximo passo: python src/preprocessar.py && python src/treinar_modelo.py")
+    print("\nDica: também execute 'python src/coletar_datajud.py' para dados via Datajud/CNJ")
+    print("Próximo passo: python src/preprocessar.py && python src/treinar_modelo.py")
 
 
 if __name__ == "__main__":

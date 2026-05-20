@@ -43,7 +43,7 @@ class LGPDService:
             
             # --- Checagem de Evidências no Bloco (Context Binding) ---
             t = texto.lower()
-            tem_dado_sensivel = "dados sensíveis" in t or any(
+            tem_dado_sensivel = ("dados sensíveis" in t and "sem dados sensíveis" not in t and "não contém dados sensíveis" not in t) or any(
                 pt in t for pt in ["saúde", "biometria", "racial", "religião", "orientação sexual"]
             )
             tem_crianca = "criança" in t or "menor de idade" in t or "adolescente" in t or fuzz.partial_ratio("menor de idade", t) > 88

@@ -1,0 +1,17 @@
+{
+  "acuracia_keras": 0.9393605589866638,
+  "f1_macro": 0.9340920171482774,
+  "f1_weighted": 0.9392841427758344,
+  "n_treino": 3627,
+  "n_teste": 907,
+  "input_dim": 5000,
+  "num_classes": 5,
+  "classes": [
+    "acordao",
+    "contrato",
+    "lgpd",
+    "outro",
+    "peticao"
+  ],
+  "epocas_treinadas": 82
+}
