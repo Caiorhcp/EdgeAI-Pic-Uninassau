@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileText, Search, ShieldCheck } from "lucide-react";
+import { Download, FileText, ShieldCheck } from "lucide-react";
 import type { Analysis } from "@/lib/analyze";
 import { isPersonal, type EntityType } from "@/lib/ner";
 import { CaseSheet } from "./case-sheet";
@@ -11,9 +11,14 @@ const ENTITY_LABEL: Record<EntityType, string> = {
   VALOR: "Valor", LEI: "Lei", ARTIGO: "Artigo", TRIBUNAL: "Tribunal", SUMULA: "Súmula", RECURSO: "Recurso",
 };
 
-export function Result({ result, name, onLookup }: { result: Analysis; name: string; onLookup: (numero: string) => void }) {
+export function Result({ result, name, intimation, onIntimation, onLookup }: {
+  result: Analysis;
+  name: string;
+  intimation: string;
+  onIntimation: (iso: string) => void;
+  onLookup: (numero: string) => void;
+}) {
   const personal = result.entities.filter((e) => isPersonal(e.type));
-  const legal = result.entities.filter((e) => !isPersonal(e.type) && e.type !== "PROCESSO_CNJ");
 
   function download() {
     const url = URL.createObjectURL(new Blob([result.anonymized], { type: "text/plain;charset=utf-8" }));
@@ -30,10 +35,10 @@ export function Result({ result, name, onLookup }: { result: Analysis; name: str
         {result.ocrPages > 0 && ` · ${result.ocrPages} com OCR`} · análise em {result.ms.toFixed(0)} ms, no seu navegador
       </p>
 
-      <CaseSheet result={result} onLookup={onLookup} />
+      <CaseSheet result={result} intimation={intimation} onIntimation={onIntimation} onLookup={onLookup} />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Resumo extrativo">
+        <Card title="Síntese do conteúdo">
           {result.summary.length ? (
             <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed">
               {result.summary.map((s) => <li key={s}>{s}</li>)}
@@ -41,7 +46,7 @@ export function Result({ result, name, onLookup }: { result: Analysis; name: str
           ) : <p className="text-sm text-muted">Texto curto demais para resumir.</p>}
         </Card>
 
-        <Card title="Tipo de documento">
+        <Card title="Natureza da peça (classificação automática)">
           <ul className="space-y-2">
             {result.ranking.map((p, i) => (
               <li key={p.label} className="grid grid-cols-[7.5rem_1fr_3rem] items-center gap-3 text-sm">
@@ -67,7 +72,7 @@ export function Result({ result, name, onLookup }: { result: Analysis; name: str
           )}
         </Card>
 
-        <Card title="Dados pessoais (LGPD)">
+        <Card title="Dados pessoais (Lei 13.709/2018)">
           <div className="mb-4 flex items-baseline gap-3">
             <span className="text-3xl font-semibold tabular-nums">{result.exposure.score}</span>
             <span className="text-sm text-muted">/ 100 · exposição {result.exposure.level.toLowerCase()}</span>
@@ -84,16 +89,12 @@ export function Result({ result, name, onLookup }: { result: Analysis; name: str
             </>
           )}
         </Card>
-
-        <Card title="Referências jurídicas">
-          {legal.length ? <EntityList entities={legal} onLookup={onLookup} /> : <p className="text-sm text-muted">Nenhuma referência encontrada.</p>}
-        </Card>
       </div>
     </section>
   );
 }
 
-function EntityList({ entities, onLookup }: { entities: Analysis["entities"]; onLookup?: (numero: string) => void }) {
+function EntityList({ entities }: { entities: Analysis["entities"] }) {
   const groups = Map.groupBy(entities, (e) => e.type);
   return (
     <dl className="space-y-2 text-sm">
@@ -101,16 +102,9 @@ function EntityList({ entities, onLookup }: { entities: Analysis["entities"]; on
         <div key={type} className="grid grid-cols-[7.5rem_1fr] gap-3">
           <dt className="text-muted">{ENTITY_LABEL[type]}</dt>
           <dd className="flex flex-wrap gap-1.5">
-            {[...new Set(list.map((e) => e.value))].slice(0, 12).map((v) =>
-              type === "PROCESSO_CNJ" && onLookup ? (
-                <button key={v} type="button" onClick={() => onLookup(v)} title="Consultar no Datajud"
-                  className="inline-flex items-center gap-1 rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-accent underline-offset-2 hover:underline">
-                  {v} <Search className="size-3" aria-hidden />
-                </button>
-              ) : (
-                <code key={v} className="rounded bg-surface px-1.5 py-0.5 text-xs">{v}</code>
-              ),
-            )}
+            {[...new Set(list.map((e) => e.value))].slice(0, 12).map((v) => (
+              <code key={v} className="rounded bg-surface px-1.5 py-0.5 text-xs">{v}</code>
+            ))}
           </dd>
         </div>
       ))}

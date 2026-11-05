@@ -29,6 +29,13 @@ describe("summarize", () => {
     ]);
   });
 
+  it("ignora cabeçalho rotulado e fecho com local e data", () => {
+    const text =
+      "Apelado: João Pedro Exemplo, residente nesta cidade e devidamente qualificado nos autos. " +
+      "A sentença julgou parcialmente procedente o pedido formulado na inicial. Campinas, 25 de setembro de 2025.";
+    expect(splitSentences(text)).toEqual(["A sentença julgou parcialmente procedente o pedido formulado na inicial."]);
+  });
+
   it("devolve n frases na ordem original e prioriza o dispositivo", () => {
     const out = summarize(text, 3);
     expect(out).toHaveLength(3);

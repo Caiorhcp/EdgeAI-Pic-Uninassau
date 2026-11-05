@@ -1,8 +1,7 @@
 "use client";
 
-import { AlertTriangle, FileSpreadsheet, Loader2, Search } from "lucide-react";
+import { AlertTriangle, FileDown, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { downloadFile, toCsv } from "@/lib/csv";
 import type { Instance } from "@/lib/datajud";
 import { daysBetween, humanDuration, milestoneOf, parseDatajudDate, type Milestone } from "@/lib/movements";
 
@@ -89,11 +88,6 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
   );
 }
 
-function exportMovements(numero: string, instances: Instance[]) {
-  const rows = instances.flatMap((p) => p.movements.map((m) => [numero, p.court, p.degree, fmtDate(m.date), m.name, milestoneOf(m.name) ?? ""]));
-  downloadFile(`movimentacoes-${numero.replace(/\D/g, "")}.csv`, toCsv(["Processo", "Tribunal", "Grau", "Data", "Movimentação", "Marco"], rows));
-}
-
 type State =
   | { status: "idle" }
   | { status: "busy" }
@@ -122,19 +116,32 @@ async function lookup(numero: string): Promise<State> {
   }
 }
 
-/** `initial` vem de um número CNJ encontrado no documento; a consulta dispara sozinha. */
-export function ProcessLookup({ initial = "" }: { initial?: string }) {
+/**
+ * `initial` vem de um número CNJ encontrado no documento; a consulta dispara sozinha.
+ * `onResult` entrega o andamento ao analisador para entrar no relatório em PDF.
+ */
+export function ProcessLookup({ initial = "", onResult, onReport }: {
+  initial?: string;
+  onResult: (numero: string, instances: Instance[]) => void;
+  onReport: (numero: string) => void;
+}) {
   const [value, setValue] = useState(initial);
   const [state, setState] = useState<State>(initial ? { status: "busy" } : { status: "idle" });
 
+  const finish = (s: State) => {
+    setState(s);
+    if (s.status === "done") onResult(s.numero, s.instances);
+  };
+
   useEffect(() => {
-    if (initial) lookup(initial).then(setState);
+    if (initial) lookup(initial).then(finish);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- consulta só quando o número pedido muda
   }, [initial]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setState({ status: "busy" });
-    setState(await lookup(value));
+    finish(await lookup(value));
   }
 
   return (
@@ -168,9 +175,9 @@ export function ProcessLookup({ initial = "" }: { initial?: string }) {
               <p className="text-xs text-muted">
                 Fonte: API Pública do Datajud (CNJ). Atualizado em {fmtDate(state.instances[0].updatedAt)}.
               </p>
-              <button type="button" onClick={() => exportMovements(state.numero, state.instances)}
+              <button type="button" onClick={() => onReport(state.numero)}
                 className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
-                <FileSpreadsheet className="size-4" aria-hidden /> Exportar movimentações (CSV)
+                <FileDown className="size-4" aria-hidden /> Relatório do andamento (PDF)
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXAMPLE_PAGES } from "../app/example";
-import { findLawyers, findOutcomes, findParties, labelValues, parseDate, timeline } from "./facts";
+import { findHeader, findLawyers, findOutcomes, findParties, findRequests, labelValues, parseDate, timeline } from "./facts";
 import { extractEntities } from "./ner";
 
 const example = EXAMPLE_PAGES.map((p) => p.text).join("\n\n");
@@ -19,7 +19,7 @@ describe("findParties", () => {
   it("autor e réu em linhas", () => {
     expect(findParties("Autor: João da Silva\nRé: Banco Exemplo S.A.\n")).toEqual([
       { role: "Autor", name: "João da Silva", side: "ativo" },
-      { role: "Réu", name: "Banco Exemplo S.A", side: "passivo" },
+      { role: "Réu", name: "Banco Exemplo S.A.", side: "passivo" },
     ]);
   });
 });
@@ -44,6 +44,34 @@ describe("findOutcomes", () => {
   it("parcialmente procedente não conta como procedente", () => {
     expect(findOutcomes("Ante o exposto, julgo parcialmente procedente o pedido.").map((o) => o.label)).toEqual([
       "Parcialmente procedente",
+    ]);
+  });
+});
+
+describe("cabeçalho e pedidos", () => {
+  const sentenca =
+    "PODER JUDICIÁRIO. JUSTIÇA ESTADUAL.\n2ª VARA CÍVEL DA COMARCA DE CAMPINAS\nJuíza de Direito: Dra. Helena Fictícia Prado\n" +
+    "SENTENÇA. Trata-se de ação de indenização por danos morais em que o autor alega inscrição indevida.";
+
+  it("juízo, comarca, magistrado e natureza da ação", () => {
+    expect(findHeader(sentenca)).toEqual({
+      body: "2ª Vara Cível da Comarca de Campinas",
+      district: "Campinas",
+      judge: "Dra. Helena Fictícia Prado",
+      action: "ação de indenização por danos morais",
+    });
+  });
+
+  it("relator em acórdão e campos ausentes", () => {
+    const h = findHeader("ACÓRDÃO. 5ª Turma Recursal do Rio Grande do Sul. Relator: Des. Paulo Exemplo Lima\nVistos.");
+    expect(h.body).toBe("5ª Turma Recursal do Rio Grande do Sul");
+    expect(h.judge).toBe("Des. Paulo Exemplo Lima");
+    expect(h.district).toBeNull();
+  });
+
+  it("pedidos", () => {
+    expect(findRequests(example)).toEqual([
+      "Ante o exposto, requer seja o presente recurso extraordinário admitido e, no mérito, provido, para reformar o acórdão e condenar a ré ao pagamento das diferenças, estimadas em R$ 48.320,15.",
     ]);
   });
 });

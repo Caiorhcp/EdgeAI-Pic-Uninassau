@@ -11,6 +11,15 @@ const BENCHMARK = [
 ];
 
 const REPO = "https://github.com/Caiorhcp/sapo-juridico";
+const AUTHOR = "https://github.com/Caiorhcp";
+const REFERENCES = [
+  { label: "VICTOR: a Dataset for Brazilian Legal Documents Classification (LREC 2020)", href: "https://aclanthology.org/2020.lrec-1.181/" },
+  { label: "Conjunto VICTOR Small no Hugging Face", href: "https://huggingface.co/datasets/Luciano/victor_lrec_2020_small" },
+  { label: "API Pública do Datajud (CNJ)", href: "https://datajud-wiki.cnj.jus.br/api-publica/" },
+  { label: "Resolução CNJ nº 65/2008 (numeração única)", href: "https://atos.cnj.jus.br/atos/detalhar/119" },
+  { label: "Código de Processo Civil (Lei 13.105/2015)", href: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm" },
+  { label: "Lei Geral de Proteção de Dados (Lei 13.709/2018)", href: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm" },
+];
 
 export default function Home() {
   return (
@@ -102,9 +111,26 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="mt-16 flex flex-wrap justify-between gap-2 border-t border-line pt-6 text-xs text-muted">
-        <span>Projeto de Iniciação Científica · UNINASSAU · Caio R.</span>
-        <a href={REPO} className="underline-offset-4 hover:underline">Código no GitHub</a>
+      <footer className="mt-16 grid gap-6 border-t border-line pt-6 text-sm sm:grid-cols-2">
+        <div>
+          <p>
+            Feito por{" "}
+            <a href={AUTHOR} className="font-semibold text-accent underline-offset-4 hover:underline">Caio Gonçalves</a>
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            <a href={AUTHOR} className="underline-offset-4 hover:underline">github.com/Caiorhcp</a>
+            {" · "}
+            <a href={REPO} className="underline-offset-4 hover:underline">código-fonte</a>
+          </p>
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Referências</p>
+          <ul className="space-y-1 text-xs text-muted">
+            {REFERENCES.map((r) => (
+              <li key={r.href}><a href={r.href} className="underline-offset-4 hover:underline">{r.label}</a></li>
+            ))}
+          </ul>
+        </div>
       </footer>
     </main>
   );

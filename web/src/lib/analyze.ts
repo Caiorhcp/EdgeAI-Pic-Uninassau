@@ -1,8 +1,8 @@
 import { Classifier, type Model, type Prediction } from "./classifier";
 import { findDeadlines, type Deadline } from "./deadlines";
 import {
-  findLawyers, findOutcomes, findParties, labelValues, timeline,
-  type DatedEvent, type LabeledValue, type Lawyer, type Outcome, type Party,
+  findHeader, findLawyers, findOutcomes, findParties, findRequests, labelValues, timeline,
+  type CaseHeader, type DatedEvent, type LabeledValue, type Lawyer, type Outcome, type Party,
 } from "./facts";
 import { anonymize, exposureScore, extractEntities, type Entity } from "./ner";
 import type { Page } from "./pdf";
@@ -27,7 +27,10 @@ export interface Analysis {
   ms: number;
   // Ficha do processo
   processNumbers: string[];
-  courts: string[];
+  courts: string[]; // tribunais citados no texto
+  header: CaseHeader;
+  requests: string[];
+  laws: { laws: string[]; articles: string[]; precedents: string[] }; // fundamentação normativa citada
   parties: Party[];
   lawyers: Lawyer[];
   outcomes: Outcome[];
@@ -85,6 +88,9 @@ export function analyze(clf: Classifier, pages: Page[]): Analysis {
     ocrPages: pages.filter((p) => p.ocr).length,
     processNumbers: valuesOf("PROCESSO_CNJ"),
     courts: valuesOf("TRIBUNAL"),
+    header: findHeader(text),
+    requests: findRequests(text),
+    laws: { laws: valuesOf("LEI"), articles: valuesOf("ARTIGO"), precedents: [...valuesOf("SUMULA"), ...valuesOf("RECURSO")] },
     parties: findParties(text),
     lawyers: findLawyers(text),
     outcomes: findOutcomes(text),

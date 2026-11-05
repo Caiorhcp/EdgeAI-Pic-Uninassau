@@ -8,19 +8,20 @@
 
 Classifica peças processuais, encontra dados pessoais (LGPD) e resume documentos jurídicos **dentro do navegador**. O PDF nunca sai do dispositivo: leitura, OCR, classificação, extração de entidades e anonimização rodam no cliente. O modelo foi treinado com páginas reais de processos do STF rotuladas por especialistas do tribunal.
 
-Projeto de Iniciação Científica (PIC), UNINASSAU. Desenvolvimento: Caio R. · Orientação: Prof. Msc. Afonso Calábria.
+Feito por [Caio Gonçalves](https://github.com/Caiorhcp).
 
 ## O que faz
 
 - **Ficha do processo**: em um quadro só, o tipo da peça, o número e o tribunal (pelos segmentos do número CNJ), o resultado da decisão (procedente, provido, não admitido, extinto…, separando o dispositivo da peça das decisões apenas citadas), as partes por polo, os advogados com OAB, os valores rotulados (causa, danos morais, honorários…) e a linha do tempo.
 - **Prazos com vencimento**: encontra prazos no texto ("no prazo de 15 (quinze) dias") e calcula o vencimento a partir da data de intimação, em dias úteis (CPC, arts. 219, 220 e 224), com feriados nacionais e recesso forense.
-- **Triagem em lote**: vários PDFs de uma vez, numa tabela com tipo, resultado, processo e prazos; exporta planilha (CSV para Excel) e imprime ou salva o relatório em PDF.
+- **Triagem em lote**: vários PDFs de uma vez, numa tabela com natureza da peça, dispositivo, autos e prazos.
+- **Relatório de Análise Processual em PDF**: gerado no próprio navegador, em linguagem dos autos — identificação (juízo, comarca, magistrado, natureza da ação), partes e procuradores, dispositivo, pedidos, prazos com termo inicial e final, valores, fundamentação normativa, cronologia, síntese, dados pessoais mascarados e o andamento do Datajud. Em lote, abre com um quadro-resumo.
 - **Tipo de cada página**: Acórdão, Agravo em RE, Despacho, Petição de RE, Sentença ou Outros. Páginas seguidas do mesmo tipo viram uma peça (ex.: "pp. 1–2 · Petição de RE, p. 3 · Despacho").
 - **Dados pessoais**: CPF e CNPJ validados pelo dígito verificador, e-mail, telefone, endereço, RG, CNH, PIS. Gera uma nota de exposição de 0 a 100 e baixa o **texto anonimizado** (`[CPF]`, `[EMAIL]`…).
 - **Referências jurídicas**: número CNJ, leis, artigos, súmulas, tribunais, datas e valores.
 - **Resumo extrativo**: frases mais centrais do texto (TF-IDF + similaridade), com peso maior para trechos de dispositivo e pedido.
 - **PDF escaneado**: OCR automático em português com tesseract.js, servido pelo próprio site (sem CDN).
-- **Consulta ao Datajud (CNJ)**: classe, assuntos, órgão julgador e **todas** as movimentações de cada instância, com marcos destacados (distribuição, audiência, decisão, recurso, trânsito em julgado, baixa), tempo de tramitação, alerta de processo parado há mais de 90 dias e exportação em CSV. É a única parte que usa servidor, e só o número do processo é enviado.
+- **Consulta ao Datajud (CNJ)**: classe, assuntos, órgão julgador e **todas** as movimentações de cada instância, com marcos destacados (distribuição, audiência, decisão, recurso, trânsito em julgado, baixa), tempo de tramitação, alerta de processo parado há mais de 90 dias e relatório do andamento em PDF. É a única parte que usa servidor, e só o número do processo é enviado.
 - **Funciona offline**: depois da primeira visita, um service worker guarda a página, o modelo e o OCR. O site abre e analisa documentos sem internet; só o Datajud precisa de conexão.
 
 ## Arquitetura
@@ -82,7 +83,7 @@ cd web
 npm install
 echo "DATAJUD_API_KEY=<chave pública em datajud-wiki.cnj.jus.br/api-publica/acesso>" > .env.local
 npm run dev        # http://localhost:3000
-npm test           # 66 testes (Vitest)
+npm test           # 71 testes (Vitest)
 ```
 
 **Treino** (Python 3.12 com [uv](https://docs.astral.sh/uv/)): baixe os três `.parquet` de [`Luciano/victor_lrec_2020_small`](https://huggingface.co/datasets/Luciano/victor_lrec_2020_small) para `data/victor/` (`train.parquet`, `validation.parquet`, `test.parquet`).

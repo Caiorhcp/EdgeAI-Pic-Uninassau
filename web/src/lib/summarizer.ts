@@ -28,7 +28,14 @@ export function splitSentences(text: string): string[] {
   return sentences
     .map((s) => s.trim())
     .filter((s) => s.length >= 30 && s.length <= MAX_SENTENCE && s.replace(/[^a-zA-ZÀ-ú]/g, "").length >= 15)
-    .filter((s) => !isHeading(s));
+    .filter((s) => !isHeading(s) && !isBoilerplate(s));
+}
+
+/** Cabeçalho com rótulos ("Autor: … Ré: …", "Processo nº …") e fecho "Cidade, 10 de maio de 2024." não resumem nada. */
+function isBoilerplate(s: string): boolean {
+  if (/^[^,]{2,40},\s*\d{1,2}\s+de\s+[a-zç]+\s+de\s+\d{4}\.?$/i.test(s)) return true;
+  if (/^(?:autos|processo)\s+n[º°.]/i.test(s)) return true;
+  return /^[\p{Lu}][\p{Ll}]+\s*:/u.test(s); // começa com rótulo ("Apelado:", "Autor:")
 }
 
 /** Títulos de seção ("DOS FATOS", "RAZÕES DO RECURSO") vêm quase todo em maiúsculas. */

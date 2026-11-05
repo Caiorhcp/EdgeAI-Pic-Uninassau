@@ -50,12 +50,17 @@ const ROLE_WORDS =
 const LABELED_PARTY = new RegExp(`\\b(${ROLE_WORDS})\\s*:\\s*([^\\n;:]{2,120}?)(?=\\s*(?:\\.(?=\\s|$)|;|\\n|$|\\b(?:${ROLE_WORDS}|advogad[oa]s?|relator)\\s*:))`, "gi"); // ponto só encerra se seguido de espaço ("S.A." continua)
 
 const clean = (s: string) => s.replace(/\s+/g, " ").replace(/[\s,.;–-]+$/, "").trim();
-const title = (s: string) => (s === s.toUpperCase() ? s.toLowerCase().replace(/(^|\s)(\p{L})/gu, (_, a, b) => a + b.toUpperCase()) : s);
+// "2ª VARA CÍVEL DA COMARCA" → "2ª Vara Cível da Comarca" (preposições ficam minúsculas)
+const title = (s: string) =>
+  s === s.toUpperCase()
+    ? s.toLowerCase().replace(/(^|\s)(\p{L}+)/gu, (_, a: string, w: string) =>
+        a + (a && /^(?:d[aeo]s?|e)$/.test(w) ? w : w[0].toUpperCase() + w.slice(1)))
+    : s;
 
 export function findParties(text: string): Party[] {
   const out: Party[] = [];
   const add = (role: string, name: string, side: Side) => {
-    name = title(clean(name));
+    name = title(clean(name)).replace(/\bS\.A$/, "S.A."); // a regra de fim de frase corta o último ponto da sigla
     if (name.length >= 3 && !out.some((p) => p.name.toLowerCase() === name.toLowerCase())) out.push({ role, name, side });
   };
   for (const m of text.matchAll(LABELED_PARTY)) {
@@ -139,6 +144,41 @@ export function labelValues(text: string, entities: Entity[]): LabeledValue[] {
       return { label: best.label, value: e.value };
     })
     .filter((v, i, all) => all.findIndex((w) => w.value === v.value && w.label === v.label) === i);
+}
+
+export interface CaseHeader {
+  body: string | null; // juízo / órgão julgador
+  district: string | null; // comarca
+  judge: string | null; // relator ou magistrado nomeado no texto
+  action: string | null; // natureza da ação
+}
+
+const firstMatch = (text: string, re: RegExp) => re.exec(text)?.[1]?.replace(/\s+/g, " ").trim() || null;
+
+export function findHeader(text: string): CaseHeader {
+  const head = text.slice(0, 3000); // juízo e comarca ficam no cabeçalho
+  const body = firstMatch(head, /((?:\d+[ªº]\s+)?(?:Vara|Turma Recursal|Turma|Câmara|Juizado Especial|Juizado|Seção|Grupo de Câmaras)\b[^\n.]{0,90})/i);
+  return {
+    body: body && title(body),
+    // [ \t] e não \s: o nome da comarca não atravessa a quebra de linha
+    district: (() => {
+      const d = firstMatch(head, /comarca[ \t]+de[ \t]+([A-ZÀ-Ú][\wÀ-ú'-]*(?:[ \t]+(?:d[aeo]s?[ \t]+)?[A-ZÀ-Ú][\wÀ-ú'-]*){0,4})/i);
+      return d && title(d);
+    })(),
+    judge: firstMatch(text, /\b(?:Relator[a]?|Ju[ií]z[a]?(?:[ \t]+(?:de[ \t]+Direito|Federal))?)[ \t]*:[ \t]*((?:Des\.|Desembargador[a]?|Min\.|Ministr[oa]|Dr[a]?\.)?[ \t]*[A-ZÀ-Ú][\wÀ-ú]+(?:[ \t]+(?:d[aeo]s?[ \t]+)?[A-ZÀ-Ú][\wÀ-ú.]+){1,6})/),
+    action: firstMatch(text, /\b(a[çc][ãa]o\s+(?:de\s+|civil\s+pública|declaratória|anulatória|monitória|revisional|indenizatória|rescisória|popular)[^.,;\n]{0,70}?)(?=\s+(?:em\s+que|contra|proposta|ajuizada|movida|na\s+qual|pelo|pela)\b|[.,;\n])/i),
+  };
+}
+
+/** Frases com pedidos ("requer", "pleiteia", "postula"), no máximo `max`. */
+export function findRequests(text: string, max = 6): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/\b(?:requer(?:em)?|pleiteia|postula|pede)\b/gi)) {
+    const s = sentenceAt(text, m.index, m.index + m[0].length);
+    if (!out.includes(s)) out.push(s);
+    if (out.length === max) break;
+  }
+  return out;
 }
 
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];

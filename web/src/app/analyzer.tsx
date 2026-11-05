@@ -1,10 +1,9 @@
 "use client";
 
-import { FileSpreadsheet, Loader2, Printer, Upload, X } from "lucide-react";
+import { FileDown, Loader2, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { analyze, loadClassifier, type Analysis } from "@/lib/analyze";
-import { courtOf } from "@/lib/cnj";
-import { downloadFile, toCsv } from "@/lib/csv";
+import type { Instance } from "@/lib/datajud";
 import type { Page } from "@/lib/pdf";
 import { EXAMPLE_PAGES } from "./example";
 import { ProcessLookup } from "./process-lookup";
@@ -23,6 +22,11 @@ interface Job {
 
 const MAX_FILES = 30;
 
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function Analyzer() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [selected, setSelected] = useState(0);
@@ -32,6 +36,30 @@ export function Analyzer() {
   const [dragging, setDragging] = useState(false);
   // nonce remonta a consulta mesmo quando o mesmo número é pedido de novo
   const [lookup, setLookup] = useState({ numero: "", nonce: 0 });
+  // Termo inicial dos prazos (ficha e relatório). Vazio = hoje; calculado só no navegador, nunca na pré-renderização.
+  const [intimationInput, setIntimation] = useState("");
+  const intimation = () => intimationInput || todayIso();
+  const [dockets, setDockets] = useState<Record<string, Instance[]>>({}); // andamentos consultados, entram no relatório
+  const [reporting, setReporting] = useState(false);
+
+  async function generateReport(onlyDocket?: string) {
+    setReporting(true);
+    try {
+      const { downloadReport } = await import("@/lib/report"); // jsPDF só carrega quando pedido
+      const ready = docs.filter((d): d is Required<Pick<Doc, "name" | "result">> & Doc => !!d.result);
+      const date = new Date().toISOString().slice(0, 10);
+      downloadReport(
+        onlyDocket
+          ? { docs: [], intimation: intimation(), dockets: { [onlyDocket]: dockets[onlyDocket] } }
+          : { docs: ready.map((d) => ({ name: d.name, result: d.result })), intimation: intimation(), dockets },
+        onlyDocket ? `andamento-${onlyDocket.replace(/\D/g, "")}.pdf` : `relatorio-processual-${date}.pdf`,
+      );
+    } catch {
+      setNotice("Não foi possível gerar o relatório. Tente novamente.");
+    } finally {
+      setReporting(false);
+    }
+  }
 
   function lookupProcess(numero: string) {
     setLookup((l) => ({ numero, nonce: l.nonce + 1 }));
@@ -123,15 +151,16 @@ export function Analyzer() {
       </div>
 
       {docs.length > 0 && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <button type="button" onClick={() => exportCsv(docs)}
-            className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">
-            <FileSpreadsheet className="size-4" aria-hidden /> Exportar planilha (CSV)
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <button type="button" onClick={() => generateReport()} disabled={reporting || !docs.some((d) => d.result)}
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40">
+            {reporting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileDown className="size-4" aria-hidden />}
+            Gerar relatório em PDF
           </button>
-          <button type="button" onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">
-            <Printer className="size-4" aria-hidden /> Imprimir ou salvar PDF
-          </button>
+          <span className="text-xs text-muted">
+            {docs.length > 1 ? "Quadro-resumo e análise completa de cada documento" : "Análise completa do documento"}
+            {Object.keys(dockets).length > 0 && ", com o andamento consultado no Datajud"}
+          </span>
           <button type="button" onClick={() => setDocs([])}
             className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface">
             <X className="size-4" aria-hidden /> Limpar
@@ -141,7 +170,9 @@ export function Analyzer() {
 
       {docs.length > 1 && <BatchTable docs={docs} selected={selected} onSelect={setSelected} />}
 
-      {current?.result && <Result result={current.result} name={current.name} onLookup={lookupProcess} />}
+      {current?.result && (
+        <Result result={current.result} name={current.name} intimation={intimation()} onIntimation={setIntimation} onLookup={lookupProcess} />
+      )}
       {current?.error && <p role="alert" className="rounded-lg border border-line bg-surface p-3 text-sm">{current.name}: {current.error}</p>}
 
       <section id="consulta" aria-labelledby="consulta-titulo" className="scroll-mt-6 rounded-xl border border-line bg-card p-5 print:hidden">
@@ -150,7 +181,9 @@ export function Analyzer() {
           Metadados públicos: classe, assuntos, órgão julgador e todas as movimentações. Só o número do processo sai do seu
           navegador; os documentos analisados acima, não.
         </p>
-        <ProcessLookup key={lookup.nonce} initial={lookup.numero} />
+        <ProcessLookup key={lookup.nonce} initial={lookup.numero}
+          onResult={(numero, instances) => setDockets((d) => ({ ...d, [numero]: instances }))}
+          onReport={(numero) => generateReport(numero)} />
       </section>
     </div>
   );
@@ -167,7 +200,7 @@ function BatchTable({ docs, selected, onSelect }: { docs: Doc[]; selected: numbe
         <caption className="px-4 pt-4 text-left font-display text-lg font-semibold">Triagem de {docs.length} documentos</caption>
         <thead>
           <tr className="border-b border-line text-muted">
-            {["Arquivo", "Tipo", "Resultado", "Processo", "Prazos", "LGPD"].map((h) => (
+            {["Documento", "Natureza", "Dispositivo", "Autos nº", "Prazos", "LGPD"].map((h) => (
               <th key={h} className="px-4 py-2 font-medium">{h}</th>
             ))}
           </tr>
@@ -198,19 +231,4 @@ function BatchTable({ docs, selected, onSelect }: { docs: Doc[]; selected: numbe
       </table>
     </div>
   );
-}
-
-function exportCsv(docs: Doc[]) {
-  const header = ["Arquivo", "Páginas", "Tipo provável", "Confiança", "Resultado", "Decisões citadas", "Processos", "Tribunal do processo", "Tribunais citados",
-    "Polo ativo", "Polo passivo", "Advogados", "Prazos", "Valores", "Exposição LGPD", "Erro"];
-  const rows = docs.map(({ name, result: r, error }) => r ? [
-    name, r.pages, r.ranking[0].label, `${(r.ranking[0].probability * 100).toFixed(0)}%`, mainOutcome(r),
-    [...new Set(r.outcomes.filter((o) => !o.own).map((o) => o.label))].join(", "),
-    r.processNumbers.join(", "), r.processNumbers.map((n) => courtOf(n) ?? "?").join(", "), r.courts.join(", "),
-    r.parties.filter((p) => p.side === "ativo").map((p) => p.name).join("; "),
-    r.parties.filter((p) => p.side === "passivo").map((p) => p.name).join("; "),
-    r.lawyers.map((l) => (l.name ? `${l.name} (${l.oab})` : l.oab)).join("; "),
-    deadlinesText(r), r.values.map((v) => `${v.label}: ${v.value}`).join("; "), r.exposure.score, "",
-  ] : [name, ...Array<string>(header.length - 2).fill(""), error ?? ""]);
-  downloadFile(`sapo-triagem-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(header, rows));
 }
