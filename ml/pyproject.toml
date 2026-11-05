@@ -1,7 +1,7 @@
 [project]
-name = "edge-ai-juridico-ml"
+name = "sapo-ml"
 version = "2.0.0"
-description = "Treino do classificador de tipo de documento jurídico (VICTOR/STF)"
+description = "S.A.P.O.: treino do classificador de peças processuais (VICTOR/STF)"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.0",

@@ -1,8 +1,8 @@
-# Edge AI Jurídico
+# S.A.P.O. – Sistema de Análise de Peças Offline
 
-[![CI](https://github.com/Caiorhcp/EdgeAI-Pic-Uninassau/actions/workflows/ci.yml/badge.svg)](https://github.com/Caiorhcp/EdgeAI-Pic-Uninassau/actions/workflows/ci.yml)
+[![CI](https://github.com/Caiorhcp/sapo-juridico/actions/workflows/ci.yml/badge.svg)](https://github.com/Caiorhcp/sapo-juridico/actions/workflows/ci.yml)
 
-**Demo: https://edge-ai-juridico.vercel.app**
+**Demo: https://sapo-juridico.vercel.app**
 
 Classifica peças processuais, encontra dados pessoais (LGPD) e resume documentos jurídicos **dentro do navegador**. O PDF nunca sai do dispositivo: leitura, OCR, classificação, extração de entidades e anonimização rodam no cliente. O modelo foi treinado com páginas reais de processos do STF rotuladas por especialistas do tribunal.
 

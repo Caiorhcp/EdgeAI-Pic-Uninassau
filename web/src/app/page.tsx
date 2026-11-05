@@ -8,7 +8,7 @@ const BENCHMARK = [
   { model: "CNN (artigo original)", macro: 75.8, weighted: 94.7 },
 ];
 
-const REPO = "https://github.com/Caiorhcp/EdgeAI-Pic-Uninassau";
+const REPO = "https://github.com/Caiorhcp/sapo-juridico";
 
 export default function Home() {
   return (
@@ -17,7 +17,8 @@ export default function Home() {
         <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-muted">
           <Lock className="size-3.5" aria-hidden /> Processado no seu navegador · nenhum arquivo é enviado
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Edge AI Jurídico</h1>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">S.A.P.O.</h1>
+        <p className="mt-1 text-sm font-medium uppercase tracking-wide text-accent">Sistema de Análise de Peças Offline</p>
         <p className="mt-3 text-lg text-muted">
           Classifica peças processuais, encontra dados pessoais e resume documentos jurídicos, com um modelo
           treinado em documentos reais do STF que roda inteiro no seu dispositivo.

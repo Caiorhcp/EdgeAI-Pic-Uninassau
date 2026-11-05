@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Edge AI Jurídico",
+  title: "S.A.P.O. – Sistema de Análise de Peças Offline",
   description:
     "Classificação de peças processuais, detecção de dados pessoais (LGPD) e resumo de documentos jurídicos, rodando no navegador.",
 };
