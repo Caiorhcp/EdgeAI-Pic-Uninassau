@@ -109,7 +109,7 @@ web/
 
 ## Dados e licença
 
-O VICTOR é distribuído sob CC BY-NC (uso não comercial); por isso os dados não estão neste repositório. Cite o trabalho original:
+O código está sob a licença [MIT](LICENSE). O VICTOR é distribuído sob CC BY-NC (uso não comercial); por isso os dados não estão neste repositório. Cite o trabalho original:
 
 > Luz de Araujo, P. H.; de Campos, T. E.; Braz, F. A.; da Silva, N. C. *VICTOR: a Dataset for Brazilian Legal Documents Classification*. LREC 2020, p. 1449–1458.
 
