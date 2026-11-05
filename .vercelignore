@@ -1,0 +1,8 @@
+# O site fica em web/ (Root Directory do projeto na Vercel); o resto do repo (dados, ML, código antigo) não sobe.
+/*
+!/web
+/web/node_modules
+/web/.next
+/web/.env*
+/web/.vercel
+/web/public/tesseract

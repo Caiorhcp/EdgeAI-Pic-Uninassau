@@ -34,3 +34,5 @@ htmlcov/
 *.log
 pyright_out.txt
 .pyre/
+# Vercel
+.vercel/
