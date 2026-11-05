@@ -3,6 +3,7 @@
 import { AlertTriangle, FileDown, Loader2, Search, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Instance } from "@/lib/datajud";
+import { CourtLink, goToUpload } from "./court-link";
 import {
   daysBetween, describeMovement, humanDuration, milestoneOf, parseDatajudDate, redistributions, type Milestone,
 } from "@/lib/movements";
@@ -117,17 +118,10 @@ type State =
   | { status: "idle" }
   | { status: "busy" }
   | { status: "done"; numero: string; instances: Instance[] }
-  | { status: "error"; msg: string; limited?: boolean };
+  | { status: "error"; msg: string; limited?: boolean; numero?: string };
 
 // Limite de consultas (429), lentidão (504) e instabilidade (502) do Datajud: o caminho é analisar os autos em PDF
 const LIMITED = new Set([429, 502, 504]);
-
-/** Leva até a área de envio de PDFs (id="enviar" no analisador) e abre a escolha de arquivos. */
-function goToUpload() {
-  const area = document.getElementById("enviar");
-  area?.scrollIntoView({ behavior: "smooth", block: "center" });
-  area?.querySelector<HTMLInputElement>("input[type=file]")?.click();
-}
 
 const fmtDate = (iso: string | null) => parseDatajudDate(iso)?.toLocaleDateString("pt-BR", { timeZone: "UTC" }) ?? "—";
 
@@ -140,7 +134,7 @@ async function lookup(numero: string): Promise<State> {
     });
     const data = (await res.json()) as { error?: string; numero?: string; instances?: Instance[] };
     if (!res.ok || !data.instances) {
-      return { status: "error", msg: data.error ?? "Erro inesperado na consulta.", limited: LIMITED.has(res.status) };
+      return { status: "error", msg: data.error ?? "Erro inesperado na consulta.", limited: LIMITED.has(res.status), numero };
     }
     return { status: "done", numero: data.numero!, instances: data.instances };
   } catch {
@@ -209,10 +203,13 @@ export function ProcessLookup({ initial = "", onResult, onReport }: {
                   adicionar os PDFs aqui no S.A.P.O. para a varredura completa: partes, dispositivo, prazos, valores e
                   relatório em PDF, tudo processado no seu navegador.
                 </p>
-                <button type="button" onClick={goToUpload}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent">
-                  <Upload className="size-4" aria-hidden /> Adicionar os autos em PDF
-                </button>
+                <div className="mt-3 flex flex-wrap items-start gap-2">
+                  <button type="button" onClick={goToUpload}
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent">
+                    <Upload className="size-4" aria-hidden /> Adicionar os autos em PDF
+                  </button>
+                  {state.numero && <CourtLink numero={state.numero} />}
+                </div>
               </>
             )}
           </div>
@@ -223,6 +220,13 @@ export function ProcessLookup({ initial = "", onResult, onReport }: {
               <InstanceCard key={i} p={p}
                 moved={state.instances.some((o) => lastMove(o) > lastMove(p))} />
             ))}
+            <div className="rounded-lg border border-line p-3 text-sm">
+              <p className="mb-2 text-muted">
+                O Datajud traz só o andamento. Para analisar as peças (partes, dispositivo, prazos), baixe os autos no
+                tribunal e adicione o PDF aqui.
+              </p>
+              <CourtLink numero={state.numero} />
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted">
                 Fonte: API Pública do Datajud (CNJ). Atualizado em {fmtDate(state.instances[0].updatedAt)}.

@@ -4,6 +4,7 @@ import { CalendarClock, Gavel, Landmark, Scale, Search, Users } from "lucide-rea
 import type { Analysis } from "@/lib/analyze";
 import { courtOf } from "@/lib/cnj";
 import { dueDate } from "@/lib/deadlines";
+import { CourtLink } from "./court-link";
 
 export const fmtIso = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
@@ -41,6 +42,7 @@ export function CaseSheet({ result, intimation, onIntimation, onLookup }: {
                     </button>
                     {/* Tribunal pelos segmentos J.TR do número (Res. CNJ 65/2008), não pelos tribunais citados */}
                     <span className="text-muted">{courtOf(n) ?? "dígito verificador inválido"}</span>
+                    <CourtLink numero={n} compact />
                   </span>
                 ))}
               </span>

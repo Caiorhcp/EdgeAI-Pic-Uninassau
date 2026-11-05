@@ -21,7 +21,8 @@ Feito por [Caio Gonçalves](https://github.com/Caiorhcp).
 - **Referências jurídicas**: número CNJ, leis, artigos, súmulas, tribunais, datas e valores.
 - **Resumo extrativo**: frases mais centrais do texto (TF-IDF + similaridade), com peso maior para trechos de dispositivo e pedido.
 - **PDF escaneado**: OCR automático em português com tesseract.js, servido pelo próprio site (sem CDN).
-- **Consulta ao Datajud (CNJ)**: classe, assuntos, órgão julgador e **todas** as movimentações de cada instância, com marcos destacados (distribuição, audiência, decisão, recurso, trânsito em julgado, baixa), tempo de tramitação, alerta de processo parado há mais de 90 dias e relatório do andamento em PDF. É a única parte que usa servidor, e só o número do processo é enviado.
+- **Consulta ao Datajud (CNJ)**: classe, assuntos, órgão julgador e **todas** as movimentações de cada instância, com marcos destacados (distribuição, audiência, decisão, recurso, trânsito em julgado, baixa), tempo de tramitação, alerta de processo parado há mais de 90 dias e relatório do andamento em PDF.
+- **Atalho para os autos**: o botão "Abrir autos no tribunal" identifica o sistema pelo número CNJ (PJe, eproc, e-SAJ…), copia o número e abre a consulta pública certa (no TJSP, já com o processo pesquisado). O download fica com o usuário: os tribunais exigem login, certificado ou CAPTCHA, e o S.A.P.O. não contorna essas proteções. Depois, é só soltar o PDF para a varredura. É a única parte que usa servidor, e só o número do processo é enviado.
 - **Funciona offline**: depois da primeira visita, um service worker guarda a página, o modelo e o OCR. O site abre e analisa documentos sem internet; só o Datajud precisa de conexão.
 
 ## Arquitetura
