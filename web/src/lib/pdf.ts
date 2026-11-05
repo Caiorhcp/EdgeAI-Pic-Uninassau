@@ -11,6 +11,11 @@ export interface Page {
 
 const MIN_TEXT = 50; // abaixo disso a página provavelmente é imagem
 
+// Arquivos servidos pelo próprio site (scripts/copy-ocr.mjs), sem chamada a CDN
+export const OCR_PATHS = { workerPath: "/tesseract/worker.min.js", corePath: "/tesseract", langPath: "/tesseract/lang" };
+
+export const pdfWorkerUrl = () => new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+
 /** O tesseract costuma ler "@" como "Q", "©" ou "®" (às vezes com espaço); sem isso o e-mail some da análise de LGPD. */
 export function fixOcrText(text: string): string {
   return text.replace(
@@ -22,7 +27,7 @@ const MAX_PAGES = 200;
 
 export async function readPdf(file: File, onProgress: (msg: string) => void): Promise<Page[]> {
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl();
 
   const task = pdfjs.getDocument({ data: await file.arrayBuffer() });
   const doc = await task.promise.catch((e: unknown) => {
@@ -48,12 +53,7 @@ export async function readPdf(file: File, onProgress: (msg: string) => void): Pr
         onProgress(`OCR da página ${n} de ${total} (página escaneada)`);
         if (!ocr) {
           const { createWorker } = await import("tesseract.js");
-          // Arquivos servidos pelo próprio site (scripts/copy-ocr.mjs), sem chamada a CDN
-          ocr = await createWorker("por", 1, {
-            workerPath: "/tesseract/worker.min.js",
-            corePath: "/tesseract",
-            langPath: "/tesseract/lang",
-          });
+          ocr = await createWorker("por", 1, OCR_PATHS);
         }
         const viewport = page.getViewport({ scale: 2 });
         const canvas = document.createElement("canvas");

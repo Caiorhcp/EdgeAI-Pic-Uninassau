@@ -1,5 +1,6 @@
 import { Cpu, Lock, Scale } from "lucide-react";
 import { Analyzer } from "./analyzer";
+import { OfflineStatus } from "./offline-status";
 
 // Números de ml/metrics.json (teste do VICTOR Small, 95.526 páginas) e da Tabela 2 de Luz de Araujo et al. (LREC 2020)
 const BENCHMARK = [
@@ -14,9 +15,12 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
       <header className="mb-10 max-w-3xl">
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-muted">
-          <Lock className="size-3.5" aria-hidden /> Processado no seu navegador · nenhum arquivo é enviado
-        </p>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <p className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-muted">
+            <Lock className="size-3.5" aria-hidden /> Processado no seu navegador · nenhum arquivo é enviado
+          </p>
+          <OfflineStatus />
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">S.A.P.O.</h1>
         <p className="mt-1 text-sm font-medium uppercase tracking-wide text-accent">Sistema de Análise de Peças Offline</p>
         <p className="mt-3 text-lg text-muted">

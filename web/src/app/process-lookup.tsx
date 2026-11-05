@@ -28,7 +28,12 @@ async function lookup(numero: string): Promise<State> {
     if (!res.ok || !data.instances) return { status: "error", msg: data.error ?? "Erro inesperado na consulta." };
     return { status: "done", numero: data.numero!, instances: data.instances };
   } catch {
-    return { status: "error", msg: "Sem conexão com o servidor." };
+    return {
+      status: "error",
+      msg: navigator.onLine
+        ? "Sem conexão com o servidor."
+        : "Você está offline. A análise de documentos funciona sem internet, mas a consulta ao Datajud precisa de conexão.",
+    };
   }
 }
 
