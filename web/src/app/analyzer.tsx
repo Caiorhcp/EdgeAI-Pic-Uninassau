@@ -1,11 +1,12 @@
 "use client";
 
-import { Download, FileText, Loader2, ShieldCheck, Upload } from "lucide-react";
+import { Download, FileText, Loader2, Search, ShieldCheck, Upload } from "lucide-react";
 import { useState } from "react";
 import { analyze, loadClassifier, type Analysis } from "@/lib/analyze";
 import { isPersonal, type EntityType } from "@/lib/ner";
 import type { Page } from "@/lib/pdf";
 import { EXAMPLE_PAGES } from "./example";
+import { ProcessLookup } from "./process-lookup";
 
 type State = { status: "idle" } | { status: "busy"; msg: string } | { status: "done"; result: Analysis; name: string } | { status: "error"; msg: string };
 
@@ -19,6 +20,13 @@ export function Analyzer() {
   const [state, setState] = useState<State>({ status: "idle" });
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
+  // nonce remonta a consulta mesmo quando o mesmo número é pedido de novo
+  const [lookup, setLookup] = useState({ numero: "", nonce: 0 });
+
+  function lookupProcess(numero: string) {
+    setLookup((l) => ({ numero, nonce: l.nonce + 1 }));
+    document.getElementById("consulta")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   async function run(name: string, getPages: (progress: (m: string) => void) => Promise<Page[]>) {
     try {
@@ -91,12 +99,21 @@ export function Analyzer() {
         )}
       </div>
 
-      {state.status === "done" && <Result result={state.result} name={state.name} />}
+      {state.status === "done" && <Result result={state.result} name={state.name} onLookup={lookupProcess} />}
+
+      <section id="consulta" aria-labelledby="consulta-titulo" className="scroll-mt-6 rounded-xl border border-line p-5">
+        <h2 id="consulta-titulo" className="font-semibold">Consultar processo no Datajud (CNJ)</h2>
+        <p className="mb-4 mt-1 text-sm text-muted">
+          Metadados públicos: classe, assuntos, órgão julgador e movimentações. Só o número do processo sai do seu
+          navegador; o documento analisado acima, não.
+        </p>
+        <ProcessLookup key={lookup.nonce} initial={lookup.numero} />
+      </section>
     </div>
   );
 }
 
-function Result({ result, name }: { result: Analysis; name: string }) {
+function Result({ result, name, onLookup }: { result: Analysis; name: string; onLookup: (numero: string) => void }) {
   const personal = result.entities.filter((e) => isPersonal(e.type));
   const legal = result.entities.filter((e) => !isPersonal(e.type));
   const pages = result.segments.at(-1)?.to ?? 1;
@@ -171,14 +188,14 @@ function Result({ result, name }: { result: Analysis; name: string }) {
           ) : <p className="text-sm text-muted">Texto curto demais para resumir.</p>}
         </Card>
         <Card title="Referências jurídicas">
-          {legal.length ? <EntityList entities={legal} /> : <p className="text-sm text-muted">Nenhuma referência encontrada.</p>}
+          {legal.length ? <EntityList entities={legal} onLookup={onLookup} /> : <p className="text-sm text-muted">Nenhuma referência encontrada.</p>}
         </Card>
       </div>
     </section>
   );
 }
 
-function EntityList({ entities }: { entities: Analysis["entities"] }) {
+function EntityList({ entities, onLookup }: { entities: Analysis["entities"]; onLookup?: (numero: string) => void }) {
   const groups = Map.groupBy(entities, (e) => e.type);
   return (
     <dl className="space-y-2 text-sm">
@@ -186,9 +203,16 @@ function EntityList({ entities }: { entities: Analysis["entities"] }) {
         <div key={type} className="grid grid-cols-[7.5rem_1fr] gap-3">
           <dt className="text-muted">{ENTITY_LABEL[type]}</dt>
           <dd className="flex flex-wrap gap-1.5">
-            {[...new Set(list.map((e) => e.value))].slice(0, 12).map((v) => (
-              <code key={v} className="rounded bg-surface px-1.5 py-0.5 text-xs">{v}</code>
-            ))}
+            {[...new Set(list.map((e) => e.value))].slice(0, 12).map((v) =>
+              type === "PROCESSO_CNJ" && onLookup ? (
+                <button key={v} type="button" onClick={() => onLookup(v)} title="Consultar no Datajud"
+                  className="inline-flex items-center gap-1 rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-accent underline-offset-2 hover:underline">
+                  {v} <Search className="size-3" aria-hidden />
+                </button>
+              ) : (
+                <code key={v} className="rounded bg-surface px-1.5 py-0.5 text-xs">{v}</code>
+              ),
+            )}
           </dd>
         </div>
       ))}
