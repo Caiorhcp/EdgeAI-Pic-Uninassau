@@ -21,7 +21,7 @@ export interface Instance {
   filedAt: string | null;
   system: string | null;
   updatedAt: string | null;
-  movements: Movement[]; // mais recentes primeiro
+  movements: Movement[]; // todas, mais recentes primeiro
 }
 
 interface Source {
@@ -84,7 +84,7 @@ export async function fetchProcess(cnj: Cnj, alias: string): Promise<Instance[]>
     movements: (s.movimentos ?? [])
       .filter((m): m is { nome: string; dataHora: string } => !!m.nome && !!m.dataHora)
       .sort((a, b) => b.dataHora.localeCompare(a.dataHora))
-      .slice(0, 20)
+      .slice(0, 500) // processos longos passam de centenas; o limite só protege a resposta
       .map((m) => ({ date: m.dataHora, name: m.nome })),
   }));
 }

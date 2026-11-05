@@ -2,6 +2,8 @@
 // Regras: CPC art. 219 (dias úteis), art. 220 (suspensão de 20/12 a 20/1) e art. 224 (exclui o dia do começo).
 // Só feriados nacionais e dias sem expediente forense comuns; feriados locais não entram.
 
+import { sentenceAt } from "./text";
+
 export type Unit = "dias" | "horas" | "meses" | "anos";
 
 export interface Deadline {
@@ -25,13 +27,6 @@ const DEADLINE_RE = new RegExp(
   "gi",
 );
 
-function sentenceAround(text: string, index: number): string {
-  const start = Math.max(text.lastIndexOf(".", index - 1), text.lastIndexOf("\n", index - 1)) + 1;
-  const endDot = text.indexOf(".", index);
-  const end = endDot === -1 ? text.length : endDot + 1;
-  return text.slice(start, end).replace(/\s+/g, " ").trim().slice(0, 240);
-}
-
 export function findDeadlines(text: string): Deadline[] {
   const seen = new Set<string>();
   const out: Deadline[] = [];
@@ -39,7 +34,7 @@ export function findDeadlines(text: string): Deadline[] {
     const amount = /^\d+$/.test(m[1]) ? Number(m[1]) : WORDS[m[1].toLowerCase()];
     const u = m[2].toLowerCase();
     const unit: Unit = u.startsWith("dia") ? "dias" : u.startsWith("hora") ? "horas" : u.startsWith("ano") ? "anos" : "meses";
-    const excerpt = sentenceAround(text, m.index);
+    const excerpt = sentenceAt(text, m.index, m.index + m[0].length);
     const key = `${amount}-${unit}-${excerpt}`;
     if (!amount || seen.has(key)) continue;
     seen.add(key);

@@ -10,7 +10,7 @@ export const EXAMPLE_PAGES: Page[] = [
 
 Processo nº 5001234-05.2023.4.04.7104
 
-MARIA DAS GRAÇAS EXEMPLO, brasileira, aposentada, inscrita no CPF sob o nº 529.982.247-25, residente na Rua das Acácias, 123, Passo Fundo/RS, CEP 99010-000, telefone (54) 99876-5432, e-mail maria.exemplo@email.com, por seu advogado infra-assinado, OAB/RS 12.345, vem, respeitosamente, à presença de Vossa Excelência, inconformada com o acórdão proferido pela Turma Recursal, interpor o presente
+MARIA DAS GRAÇAS EXEMPLO, brasileira, aposentada, inscrita no CPF sob o nº 529.982.247-25, residente na Rua das Acácias, 123, Passo Fundo/RS, CEP 99010-000, telefone (54) 99876-5432, e-mail maria.exemplo@email.com, por seu advogado infra-assinado, Carlos Alberto Exemplo, OAB/RS 12.345, vem, respeitosamente, à presença de Vossa Excelência, inconformada com o acórdão proferido pela Turma Recursal, interpor o presente
 
 RECURSO EXTRAORDINÁRIO
 
@@ -40,7 +40,7 @@ Passo Fundo, 14 de março de 2024.`,
 
 DECISÃO. Trata-se de recurso extraordinário interposto contra acórdão desta Turma Recursal. Verifico que o recurso não preenche os requisitos de admissibilidade, uma vez que a alegada ofensa à Constituição, se existente, seria meramente reflexa, dependendo da prévia análise da legislação infraconstitucional, o que não autoriza a abertura da via extraordinária, conforme reiterada jurisprudência do STF.
 
-Ante o exposto, NÃO ADMITO o recurso extraordinário, nos termos do art. 1.030, inciso V, do Código de Processo Civil. Intimem-se.
+Ante o exposto, NÃO ADMITO o recurso extraordinário, nos termos do art. 1.030, inciso V, do Código de Processo Civil. Intime-se a parte recorrente, que poderá interpor agravo no prazo de 15 (quinze) dias.
 
 Porto Alegre, 2 de maio de 2024. Juiz Federal Presidente da Turma Recursal.`,
   },

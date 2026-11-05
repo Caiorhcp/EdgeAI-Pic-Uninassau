@@ -1,4 +1,9 @@
 import { Classifier, type Model, type Prediction } from "./classifier";
+import { findDeadlines, type Deadline } from "./deadlines";
+import {
+  findLawyers, findOutcomes, findParties, labelValues, timeline,
+  type DatedEvent, type LabeledValue, type Lawyer, type Outcome, type Party,
+} from "./facts";
 import { anonymize, exposureScore, extractEntities, type Entity } from "./ner";
 import type { Page } from "./pdf";
 import { summarize } from "./summarizer";
@@ -17,8 +22,18 @@ export interface Analysis {
   summary: string[];
   anonymized: string;
   text: string;
+  pages: number;
   ocrPages: number;
   ms: number;
+  // Ficha do processo
+  processNumbers: string[];
+  courts: string[];
+  parties: Party[];
+  lawyers: Lawyer[];
+  outcomes: Outcome[];
+  values: LabeledValue[];
+  deadlines: Deadline[];
+  events: DatedEvent[];
 }
 
 let classifier: Promise<Classifier> | null = null;
@@ -57,6 +72,7 @@ export function analyze(clf: Classifier, pages: Page[]): Analysis {
 
   const text = pages.map((p) => p.text).join("\n\n");
   const entities = extractEntities(text);
+  const valuesOf = (type: Entity["type"]) => [...new Set(entities.filter((e) => e.type === type).map((e) => e.value))];
   return {
     ranking,
     segments,
@@ -65,7 +81,16 @@ export function analyze(clf: Classifier, pages: Page[]): Analysis {
     summary: summarize(text, 5),
     anonymized: anonymize(text, entities),
     text,
+    pages: pages.length,
     ocrPages: pages.filter((p) => p.ocr).length,
+    processNumbers: valuesOf("PROCESSO_CNJ"),
+    courts: valuesOf("TRIBUNAL"),
+    parties: findParties(text),
+    lawyers: findLawyers(text),
+    outcomes: findOutcomes(text),
+    values: labelValues(text, entities),
+    deadlines: findDeadlines(text),
+    events: timeline(text, entities),
     ms: performance.now() - t0,
   };
 }

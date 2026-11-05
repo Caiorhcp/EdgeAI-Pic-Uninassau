@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { datajudAlias, parseCnj } from "./cnj";
+import { courtOf, datajudAlias, parseCnj } from "./cnj";
 
 // Calcula o DV para montar casos de teste sem depender de processos reais
 function withDv(n: string, year: string, j: string, tr: string, origin: string): string {
@@ -32,6 +32,13 @@ describe("datajudAlias", () => {
     expect(alias("8", "26")).toBe("tjsp");
     expect(alias("8", "07")).toBe("tjdft");
     expect(alias("9", "13")).toBe("tjmmg");
+  });
+
+  it("sigla do tribunal pelo número", () => {
+    expect(courtOf(withDv("5001234", "2023", "4", "04", "7104"))).toBe("TRF4");
+    expect(courtOf(withDv("0001234", "2025", "8", "26", "0114"))).toBe("TJSP");
+    expect(courtOf("0003741-14.2019.2.00.0000")).toBe("CNJ");
+    expect(courtOf("123")).toBeNull();
   });
 
   it("STF e CNJ não estão no Datajud", () => {

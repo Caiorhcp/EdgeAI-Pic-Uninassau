@@ -2,6 +2,7 @@
 // Regras sobre o texto; servem para triagem e precisam de conferência humana.
 
 import type { Entity } from "./ner";
+import { sentenceAt } from "./text";
 
 export type Side = "ativo" | "passivo";
 
@@ -113,9 +114,7 @@ export function findOutcomes(text: string): Outcome[] {
       const [s, e] = [m.index, m.index + m[0].length];
       if (taken.some(([a, b]) => s < b && e > a)) continue; // "parcialmente procedente" não vira também "procedente"
       taken.push([s, e]);
-      const start = Math.max(0, flat.lastIndexOf(".", s) + 1);
-      const end = flat.indexOf(".", e);
-      out.push({ label, own, excerpt: flat.slice(start, end === -1 ? undefined : end + 1).trim().slice(0, 240) });
+      out.push({ label, own, excerpt: sentenceAt(flat, s, e) });
     }
   }
   return out.sort((a, b) => Number(b.own) - Number(a.own));
@@ -158,11 +157,7 @@ export function parseDate(s: string): string | null {
 export function timeline(text: string, entities: Entity[]): DatedEvent[] {
   const events = entities
     .filter((e) => e.type === "DATA")
-    .map((e) => {
-      const start = Math.max(text.lastIndexOf(".", e.start - 1), text.lastIndexOf("\n", e.start - 1)) + 1;
-      const end = text.indexOf(".", e.end);
-      return { date: parseDate(e.value), excerpt: text.slice(start, end === -1 ? undefined : end + 1).replace(/\s+/g, " ").trim().slice(0, 200) };
-    })
+    .map((e) => ({ date: parseDate(e.value), excerpt: sentenceAt(text, e.start, e.end, 200) }))
     .filter((e): e is DatedEvent => e.date !== null);
   return events
     .filter((e, i) => events.findIndex((f) => f.date === e.date && f.excerpt === e.excerpt) === i)

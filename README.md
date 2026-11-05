@@ -12,12 +12,15 @@ Projeto de Iniciação Científica (PIC), UNINASSAU. Desenvolvimento: Caio R. ·
 
 ## O que faz
 
+- **Ficha do processo**: em um quadro só, o tipo da peça, o número e o tribunal (pelos segmentos do número CNJ), o resultado da decisão (procedente, provido, não admitido, extinto…, separando o dispositivo da peça das decisões apenas citadas), as partes por polo, os advogados com OAB, os valores rotulados (causa, danos morais, honorários…) e a linha do tempo.
+- **Prazos com vencimento**: encontra prazos no texto ("no prazo de 15 (quinze) dias") e calcula o vencimento a partir da data de intimação, em dias úteis (CPC, arts. 219, 220 e 224), com feriados nacionais e recesso forense.
+- **Triagem em lote**: vários PDFs de uma vez, numa tabela com tipo, resultado, processo e prazos; exporta planilha (CSV para Excel) e imprime ou salva o relatório em PDF.
 - **Tipo de cada página**: Acórdão, Agravo em RE, Despacho, Petição de RE, Sentença ou Outros. Páginas seguidas do mesmo tipo viram uma peça (ex.: "pp. 1–2 · Petição de RE, p. 3 · Despacho").
 - **Dados pessoais**: CPF e CNPJ validados pelo dígito verificador, e-mail, telefone, endereço, RG, CNH, PIS. Gera uma nota de exposição de 0 a 100 e baixa o **texto anonimizado** (`[CPF]`, `[EMAIL]`…).
 - **Referências jurídicas**: número CNJ, leis, artigos, súmulas, tribunais, datas e valores.
 - **Resumo extrativo**: frases mais centrais do texto (TF-IDF + similaridade), com peso maior para trechos de dispositivo e pedido.
 - **PDF escaneado**: OCR automático em português com tesseract.js, servido pelo próprio site (sem CDN).
-- **Consulta ao Datajud (CNJ)**: metadados públicos do processo (classe, assuntos, órgão julgador, movimentações). É a única parte que usa servidor, e só o número do processo é enviado.
+- **Consulta ao Datajud (CNJ)**: classe, assuntos, órgão julgador e **todas** as movimentações de cada instância, com marcos destacados (distribuição, audiência, decisão, recurso, trânsito em julgado, baixa), tempo de tramitação, alerta de processo parado há mais de 90 dias e exportação em CSV. É a única parte que usa servidor, e só o número do processo é enviado.
 - **Funciona offline**: depois da primeira visita, um service worker guarda a página, o modelo e o OCR. O site abre e analisa documentos sem internet; só o Datajud precisa de conexão.
 
 ## Arquitetura
@@ -79,7 +82,7 @@ cd web
 npm install
 echo "DATAJUD_API_KEY=<chave pública em datajud-wiki.cnj.jus.br/api-publica/acesso>" > .env.local
 npm run dev        # http://localhost:3000
-npm test           # 43 testes (Vitest)
+npm test           # 66 testes (Vitest)
 ```
 
 **Treino** (Python 3.12 com [uv](https://docs.astral.sh/uv/)): baixe os três `.parquet` de [`Luciano/victor_lrec_2020_small`](https://huggingface.co/datasets/Luciano/victor_lrec_2020_small) para `data/victor/` (`train.parquet`, `validation.parquet`, `test.parquet`).
@@ -108,6 +111,7 @@ web/
 - Uma página só com a qualificação das partes se parece com uma procuração e tende a sair como "Outros".
 - O modelo conhece as peças típicas de um recurso extraordinário. Contratos, pareceres e documentos de outras áreas não fazem parte das classes.
 - A análise de dados pessoais usa regras e não substitui uma avaliação jurídica de conformidade com a LGPD.
+- Partes, resultado, valores e prazos vêm de regras sobre o texto: ajudam na triagem, mas precisam de conferência. O cálculo de prazo não inclui feriados estaduais e municipais nem regras especiais de intimação (art. 231 do CPC).
 - O Datajud leva de 30 a 50 segundos por consulta, tem limite de requisições e não inclui o STF.
 
 ## Dados e licença

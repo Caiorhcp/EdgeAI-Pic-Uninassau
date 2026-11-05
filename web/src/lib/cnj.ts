@@ -21,6 +21,15 @@ export function parseCnj(input: string): Cnj | null {
   return { formatted: `${n}-${dv}.${year}.${j}.${tr}.${origin}`, digits: d, segment: j, court: tr };
 }
 
+/** Sigla do tribunal pelo número ("TRF4", "TJSP", "STF"), ou null se o número for inválido. */
+export function courtOf(numero: string): string | null {
+  const cnj = parseCnj(numero);
+  if (!cnj) return null;
+  if (cnj.segment === "1") return "STF";
+  if (cnj.segment === "2") return "CNJ";
+  return datajudAlias(cnj)?.toUpperCase().replace("TRE-DFT", "TRE-DF") ?? null;
+}
+
 /** Alias do índice no Datajud, ou null quando o tribunal não está na API pública (ex.: STF). */
 export function datajudAlias({ segment, court }: Cnj): string | null {
   const tr = Number(court);
