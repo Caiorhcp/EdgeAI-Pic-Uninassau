@@ -1,0 +1,20 @@
+[project]
+name = "edge-ai-juridico-ml"
+version = "2.0.0"
+description = "Treino do classificador de tipo de documento jurídico (VICTOR/STF)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "scikit-learn>=1.5",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["."]
