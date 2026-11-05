@@ -2,18 +2,39 @@
 
 export type Milestone = "Distribuição" | "Audiência" | "Decisão" | "Recurso" | "Trânsito em julgado" | "Baixa / arquivamento";
 
+// Códigos TPU vistos em respostas reais do Datajud. O nome vem só como a folha da árvore
+// ("Definitivo" em vez de "Arquivamento > Definitivo"), por isso o código vem antes do nome.
+const CODES: Record<number, Milestone> = { 26: "Distribuição", 970: "Audiência", 246: "Baixa / arquivamento" };
+
 // A ordem importa: "Trânsito em julgado" não pode virar "Decisão"
 const RULES: [RegExp, Milestone][] = [
   [/trânsito em julgado/i, "Trânsito em julgado"],
-  [/baixa definitiva|arquivamento definitivo|arquivad/i, "Baixa / arquivamento"],
+  [/baixa definitiva|arquivamento definitivo|arquivad|^definitivo$/i, "Baixa / arquivamento"],
+  [/ausência do autor à audiência/i, "Decisão"], // extinção sem resolução do mérito (Lei 9.099/95, art. 51, I)
   [/audiência/i, "Audiência"],
   [/distribuí|distribuiç|redistribu/i, "Distribuição"],
   [/procedência|improcedência|provimento|julgamento|extinç|homologaç|sentença|acórdão|liminar|tutela|concessão|denegaç|não conhecimento|admissibilidade/i, "Decisão"],
   [/recurso|apelaç|agravo|embargos/i, "Recurso"],
 ];
 
-export function milestoneOf(movement: string): Milestone | null {
-  return RULES.find(([re]) => re.test(movement))?.[1] ?? null;
+export function milestoneOf(movement: string, code?: number | null): Milestone | null {
+  return (code != null ? CODES[code] : undefined) ?? RULES.find(([re]) => re.test(movement.trim()))?.[1] ?? null;
+}
+
+/** "Audiência (realizada; instrução e julgamento)", "Arquivamento definitivo" */
+export function describeMovement(m: { name: string; code?: number | null; details?: string[] }): string {
+  const name = m.code === 246 || /^definitivo$/i.test(m.name.trim()) ? "Arquivamento definitivo" : m.name;
+  return m.details?.length ? `${name} (${m.details.join("; ")})` : name;
+}
+
+/** Mudanças de órgão julgador ao longo das movimentações (lista da mais nova para a mais antiga). */
+export function redistributions(moves: { date: string; body: string | null }[]): { date: string; from: string; to: string }[] {
+  const out: { date: string; from: string; to: string }[] = [];
+  const chrono = [...moves].reverse().filter((m) => m.body);
+  for (let i = 1; i < chrono.length; i++) {
+    if (chrono[i].body !== chrono[i - 1].body) out.push({ date: chrono[i].date, from: chrono[i - 1].body!, to: chrono[i].body! });
+  }
+  return out;
 }
 
 /** Datajud usa ISO ("2024-03-14T10:00:00.000Z") ou compacto ("20240314100000"). */

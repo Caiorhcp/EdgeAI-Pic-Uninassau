@@ -32,7 +32,10 @@ describe("buildReport", () => {
     const docket: Instance[] = [{
       court: "TRF4", degree: "Turma Recursal", className: "Recurso Inominado Cível", subjects: ["Dano Moral"],
       body: "5ª Turma Recursal", filedAt: "2025-04-25T00:00:00Z", system: "eproc", updatedAt: null,
-      movements: [{ date: "2026-10-01T00:00:00Z", name: "Baixa Definitiva" }, { date: "2025-05-01T00:00:00Z", name: "Distribuição" }],
+      movements: [
+        { date: "2026-10-01T00:00:00Z", name: "Definitivo", code: 246, details: [], body: "5ª Turma Recursal" },
+        { date: "2025-05-01T00:00:00Z", name: "Distribuição", code: 26, details: [], body: "5ª Turma Recursal" },
+      ],
     }];
     const pdf = buildReport({
       docs: [{ name: "a.pdf", result }, { name: "b.pdf", result }],
@@ -43,7 +46,7 @@ describe("buildReport", () => {
     const out = textOf(pdf);
     expect(out).toContain("Quadro-resumo");
     expect(out).toContain("Documento 2 de 2");
-    expect(out).toContain("Baixa Definitiva");
+    expect(out).toContain("Arquivamento definitivo");
     expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(3);
   });
 });

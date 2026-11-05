@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysBetween, humanDuration, milestoneOf, parseDatajudDate } from "./movements";
+import { daysBetween, describeMovement, humanDuration, milestoneOf, parseDatajudDate, redistributions } from "./movements";
 
 describe("milestoneOf", () => {
   it("nomes reais de movimentação (TPU)", () => {
@@ -12,6 +12,30 @@ describe("milestoneOf", () => {
     expect(milestoneOf("Baixa Definitiva")).toBe("Baixa / arquivamento");
     expect(milestoneOf("Juntada de Petição")).toBeNull();
     expect(milestoneOf("Decurso de Prazo")).toBeNull();
+  });
+});
+
+describe("dados reais do Datajud (TRF1, JEF)", () => {
+  it("'Definitivo' sozinho e o código 246 são arquivamento", () => {
+    expect(milestoneOf("Definitivo", 246)).toBe("Baixa / arquivamento");
+    expect(milestoneOf("Definitivo")).toBe("Baixa / arquivamento");
+    expect(describeMovement({ name: "Definitivo", code: 246 })).toBe("Arquivamento definitivo");
+  });
+
+  it("ausência do autor é decisão; complementos entram na descrição", () => {
+    expect(milestoneOf("Ausência do autor à audiência", 11376)).toBe("Decisão");
+    expect(describeMovement({ name: "Audiência", code: 970, details: ["realizada", "instrução e julgamento"] }))
+      .toBe("Audiência (realizada; instrução e julgamento)");
+  });
+
+  it("redistribuição entre órgãos", () => {
+    const moves = [ // mais nova primeiro, como vem da API
+      { date: "2020-11-12", body: "08ª Vara JEF- Manaus" },
+      { date: "2020-03-27", body: "08ª Vara JEF- Manaus" },
+      { date: "2020-03-26", body: "Tefé" },
+      { date: "2018-10-30", body: "Tefé" },
+    ];
+    expect(redistributions(moves)).toEqual([{ date: "2020-03-27", from: "Tefé", to: "08ª Vara JEF- Manaus" }]);
   });
 });
 

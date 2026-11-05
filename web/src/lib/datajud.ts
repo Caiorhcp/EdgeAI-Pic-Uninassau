@@ -10,6 +10,9 @@ const TIMEOUT_MS = 55_000;
 export interface Movement {
   date: string;
   name: string;
+  code: number | null; // código da Tabela Processual Unificada (TPU/CNJ); mais confiável que o nome
+  details: string[]; // complementos tabelados, ex.: ["realizada", "instrução e julgamento"]
+  body: string | null; // órgão julgador onde a movimentação ocorreu (muda em redistribuições)
 }
 
 export interface Instance {
@@ -33,7 +36,13 @@ interface Source {
   dataAjuizamento?: string;
   sistema?: { nome?: string };
   dataHoraUltimaAtualizacao?: string;
-  movimentos?: { nome?: string; dataHora?: string }[];
+  movimentos?: {
+    nome?: string;
+    dataHora?: string;
+    codigo?: number;
+    complementosTabelados?: { nome?: string }[];
+    orgaoJulgador?: { nome?: string };
+  }[];
 }
 
 const DEGREES: Record<string, string> = {
@@ -82,9 +91,15 @@ export async function fetchProcess(cnj: Cnj, alias: string): Promise<Instance[]>
     system: s.sistema?.nome ?? null,
     updatedAt: s.dataHoraUltimaAtualizacao ?? null,
     movements: (s.movimentos ?? [])
-      .filter((m): m is { nome: string; dataHora: string } => !!m.nome && !!m.dataHora)
-      .sort((a, b) => b.dataHora.localeCompare(a.dataHora))
+      .filter((m) => !!m.nome && !!m.dataHora)
+      .sort((a, b) => b.dataHora!.localeCompare(a.dataHora!))
       .slice(0, 500) // processos longos passam de centenas; o limite só protege a resposta
-      .map((m) => ({ date: m.dataHora, name: m.nome })),
+      .map((m) => ({
+        date: m.dataHora!,
+        name: m.nome!,
+        code: m.codigo ?? null,
+        details: (m.complementosTabelados ?? []).map((c) => c.nome).filter((n): n is string => !!n),
+        body: m.orgaoJulgador?.nome?.replace(/\s+/g, " ").trim() || null,
+      })),
   }));
 }

@@ -5,7 +5,7 @@ import type { Analysis } from "./analyze";
 import { courtOf } from "./cnj";
 import type { Instance } from "./datajud";
 import { dueDate, type Deadline } from "./deadlines";
-import { daysBetween, humanDuration, milestoneOf, parseDatajudDate } from "./movements";
+import { daysBetween, describeMovement, humanDuration, milestoneOf, parseDatajudDate, redistributions } from "./movements";
 import { isPersonal, type EntityType } from "./ner";
 
 export interface ReportDoc {
@@ -272,17 +272,29 @@ function documentSections(w: Writer, { name, result: r }: ReportDoc, input: Repo
 function docketSection(w: Writer, numero: string, instances: Instance[], now: Date) {
   for (const inst of instances) {
     w.para(`${numero} · ${inst.court} · ${inst.degree}`, { style: "bold" });
+    const moves = inst.movements.map((m) => ({ ...m, milestone: milestoneOf(m.name, m.code) }));
+    const closing = moves.find((m) => m.milestone === "Baixa / arquivamento" || m.milestone === "Trânsito em julgado");
+    const currentBody = moves.find((m) => m.body)?.body ?? inst.body;
     w.kv("Classe", inst.className || "—");
-    w.kv("Órgão julgador", inst.body || "—");
+    w.kv("Órgão julgador atual", currentBody || "—");
+    const redists = redistributions(moves);
+    if (redists.length) w.kv("Redistribuições", redists.map((r) => `${fmtDj(r.date)}: de ${r.from} para ${r.to}`).join("; "));
     w.kv("Assuntos", inst.subjects.join("; ") || "—");
     const filed = parseDatajudDate(inst.filedAt);
-    const last = parseDatajudDate(inst.movements[0]?.date ?? null);
+    const last = parseDatajudDate(moves[0]?.date ?? null);
     w.kv("Ajuizamento", `${fmtDj(inst.filedAt)}${filed ? ` (tramitação há ${humanDuration(daysBetween(filed, now))})` : ""}`);
-    w.kv("Última movimentação", last ? `${fmtDj(inst.movements[0].date)} (há ${humanDuration(daysBetween(last, now))})` : "—");
-    if (inst.movements.length) {
+    w.kv("Última movimentação", last ? `${fmtDj(moves[0].date)} (há ${humanDuration(daysBetween(last, now))})` : "—");
+    w.kv("Situação", closing
+      ? `${closing.milestone === "Trânsito em julgado" ? "trânsito em julgado" : "arquivado / baixado"} em ${fmtDj(closing.date)}`
+      : "em andamento");
+    if (moves.length) {
       w.table(
         [{ title: "Data", width: 22 }, { title: "Movimentação", width: WIDTH - 62 }, { title: "Marco", width: 40 }],
-        inst.movements.map((m) => [fmtDj(m.date), m.name, milestoneOf(m.name) ?? ""]),
+        moves.map((m) => [
+          fmtDj(m.date),
+          describeMovement(m) + (m.body && m.body !== currentBody ? ` · ${m.body}` : ""),
+          m.milestone ?? "",
+        ]),
       );
     }
   }

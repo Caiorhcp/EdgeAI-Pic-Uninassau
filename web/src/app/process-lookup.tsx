@@ -3,7 +3,9 @@
 import { AlertTriangle, FileDown, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Instance } from "@/lib/datajud";
-import { daysBetween, humanDuration, milestoneOf, parseDatajudDate, type Milestone } from "@/lib/movements";
+import {
+  daysBetween, describeMovement, humanDuration, milestoneOf, parseDatajudDate, redistributions, type Milestone,
+} from "@/lib/movements";
 
 const STALE_DAYS = 90; // sem movimentação há mais que isso, e sem baixa: vale olhar
 const lastMove = (p: Instance) => parseDatajudDate(p.movements[0]?.date ?? null)?.getTime() ?? 0;
@@ -12,12 +14,21 @@ const lastMove = (p: Instance) => parseDatajudDate(p.movements[0]?.date ?? null)
 function InstanceCard({ p, moved }: { p: Instance; moved: boolean }) {
   const [onlyMilestones, setOnlyMilestones] = useState(false);
   const now = new Date();
-  const moves = p.movements.map((m) => ({ ...m, milestone: milestoneOf(m.name) }));
+  const moves = p.movements.map((m) => ({ ...m, milestone: milestoneOf(m.name, m.code) }));
   const filed = parseDatajudDate(p.filedAt);
   const last = parseDatajudDate(moves[0]?.date ?? null);
   const idle = last ? daysBetween(last, now) : null;
-  const closed = moves.some((m) => m.milestone === "Baixa / arquivamento" || m.milestone === "Trânsito em julgado");
+  // Encerramento mais recente (a lista vem da mais nova para a mais antiga)
+  const closing = moves.find((m) => m.milestone === "Baixa / arquivamento" || m.milestone === "Trânsito em julgado");
+  const closed = !!closing;
   const stale = idle !== null && idle > STALE_DAYS && !closed && !moved;
+  // O órgão do cabeçalho do Datajud pode estar desatualizado; o da última movimentação é o atual
+  const currentBody = moves.find((m) => m.body)?.body ?? p.body;
+  const redists = redistributions(moves);
+  const after = closing && moves[0] !== closing ? moves[0] : null; // houve movimentação depois do arquivamento
+  const situation = closing
+    ? `${closing.milestone === "Trânsito em julgado" ? "Trânsito em julgado" : "Arquivado / baixado"} em ${fmtDate(closing.date)}`
+    : moved ? "Remetido a outra instância" : "Em andamento";
   // Data mais recente de cada marco (a lista já vem da mais nova para a mais antiga)
   const milestones = new Map<Milestone, string>();
   for (const m of moves) if (m.milestone && !milestones.has(m.milestone)) milestones.set(m.milestone, m.date);
@@ -33,16 +44,27 @@ function InstanceCard({ p, moved }: { p: Instance; moved: boolean }) {
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat label="Tramitando há" value={filed ? humanDuration(daysBetween(filed, now)) : "—"} />
         <Stat label="Última movimentação" value={idle !== null ? `há ${humanDuration(idle)}` : "—"} warn={stale} />
-        <Stat label="Situação" value={closed ? "Encerrado (baixa ou trânsito)" : moved ? "Remetido a outra instância" : "Em andamento"} />
+        <Stat label="Situação" value={situation} />
       </div>
       {stale && (
         <p className="mb-4 flex items-center gap-2 rounded-lg bg-surface p-2 text-gold">
           <AlertTriangle className="size-4 shrink-0" aria-hidden /> Sem movimentação há mais de {STALE_DAYS} dias.
         </p>
       )}
+      {after && (
+        <p className="mb-4 rounded-lg bg-surface p-2 text-muted">
+          Houve movimentação depois do encerramento ({describeMovement(after)}, em {fmtDate(after.date)}); confira se houve desarquivamento.
+        </p>
+      )}
 
-      <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-[8rem_1fr]">
-        <dt className="text-muted">Órgão julgador</dt><dd>{p.body || "—"}</dd>
+      <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-[9rem_1fr]">
+        <dt className="text-muted">Órgão julgador atual</dt><dd>{currentBody || "—"}</dd>
+        {redists.length > 0 && (
+          <>
+            <dt className="text-muted">Redistribuições</dt>
+            <dd>{redists.map((r) => `${fmtDate(r.date)}: de ${r.from} para ${r.to}`).join("; ")}</dd>
+          </>
+        )}
         <dt className="text-muted">Assuntos</dt><dd>{p.subjects.join(" · ") || "—"}</dd>
         <dt className="text-muted">Ajuizamento</dt><dd>{fmtDate(p.filedAt)}</dd>
         <dt className="text-muted">Sistema</dt><dd>{p.system ?? "—"}</dd>
@@ -69,7 +91,10 @@ function InstanceCard({ p, moved }: { p: Instance; moved: boolean }) {
             {shown.map((m, k) => (
               <li key={k} className="grid grid-cols-[6.5rem_1fr] gap-2">
                 <span className="tabular-nums text-muted">{fmtDate(m.date)}</span>
-                <span className={m.milestone ? "font-semibold" : undefined}>{m.name}</span>
+                <span>
+                  <span className={m.milestone ? "font-semibold" : undefined}>{describeMovement(m)}</span>
+                  {m.body && m.body !== currentBody && <span className="text-muted"> · {m.body}</span>}
+                </span>
               </li>
             ))}
           </ol>
