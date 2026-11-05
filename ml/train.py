@@ -16,7 +16,9 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from sklearn.metrics import (
+    balanced_accuracy_score, classification_report, confusion_matrix, f1_score, recall_score,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "victor"
@@ -64,7 +66,7 @@ def make_vectorizer() -> TfidfVectorizer:
     )
 
 
-def export(vec, clf, path: Path) -> None:
+def export(vec, clf, prior: np.ndarray, path: Path) -> None:
     vocab = vec.vocabulary_
     terms = sorted(vocab, key=vocab.get)  # índice i -> termo
     model = {
@@ -77,6 +79,7 @@ def export(vec, clf, path: Path) -> None:
         # coef[t] = pesos do termo t para cada classe (linha por termo deixa o JSON fácil de indexar)
         "coef": np.round(clf.coef_.T, 4).tolist(),
         "intercept": np.round(clf.intercept_, 4).tolist(),
+        "prior": np.round(prior, 6).tolist(),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(model, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -128,7 +131,14 @@ def main() -> None:
             best = (f1, C, clf)
 
     _, C, clf = best
-    y_pred = clf.predict(vec.transform(test.body))
+    X_test = vec.transform(test.body)
+    y_pred = clf.predict(X_test)
+
+    # O site recebe uma peça por vez, não um processo com 90% de "outros". Dividir pela
+    # frequência de treino equivale a supor classes igualmente prováveis; a métrica certa
+    # nesse cenário é o recall médio (acurácia balanceada).
+    prior = np.array([(train.document_type == c).mean() for c in clf.classes_])
+    y_uniform = clf.classes_[(clf.predict_proba(X_test) / prior).argmax(1)]
     report = classification_report(test.document_type, y_pred, output_dict=True, digits=4)
     print(classification_report(test.document_type, y_pred, digits=4))
 
@@ -141,13 +151,19 @@ def main() -> None:
             "f1_macro": report["macro avg"]["f1-score"],
             "f1_weighted": report["weighted avg"]["f1-score"],
             "per_class": {c: report[c]["f1-score"] for c in clf.classes_},
+            "balanced_accuracy": balanced_accuracy_score(test.document_type, y_pred),
+        },
+        "test_uniform_prior": {
+            "f1_macro": f1_score(test.document_type, y_uniform, average="macro"),
+            "balanced_accuracy": balanced_accuracy_score(test.document_type, y_uniform),
+            "recall_per_class": dict(zip(clf.classes_, recall_score(test.document_type, y_uniform, average=None))),
         },
         "confusion_matrix": {"labels": list(clf.classes_),
                              "matrix": confusion_matrix(test.document_type, y_pred, labels=clf.classes_).tolist()},
         "paper_baseline_svic": PAPER_SVIC,
     }
     OUT_METRICS.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-    export(vec, clf, OUT_MODEL)
+    export(vec, clf, prior, OUT_MODEL)
     print(f"modelo: {OUT_MODEL} ({OUT_MODEL.stat().st_size / 1e6:.1f} MB)")
     check_parity(vec, clf, test.body.sample(500, random_state=0))
 

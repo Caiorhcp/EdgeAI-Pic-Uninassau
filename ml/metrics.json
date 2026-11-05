@@ -24,6 +24,19 @@
       "outros": 0.9735304866376235,
       "peticao_do_RE": 0.7459168210136387,
       "sentenca": 0.8114243866715489
+    },
+    "balanced_accuracy": 0.7418385297095536
+  },
+  "test_uniform_prior": {
+    "f1_macro": 0.5756158133369903,
+    "balanced_accuracy": 0.8681351442788614,
+    "recall_per_class": {
+      "acordao_de_2_instancia": 0.9743589743589743,
+      "agravo_em_recurso_extraordinario": 0.7686040195545899,
+      "despacho_de_admissibilidade": 0.9040404040404041,
+      "outros": 0.8926213001124016,
+      "peticao_do_RE": 0.7837624387932396,
+      "sentenca": 0.8854237288135594
     }
   },
   "confusion_matrix": {
