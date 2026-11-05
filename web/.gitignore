@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# arquivos do OCR copiados de node_modules (scripts/copy-ocr.mjs)
+/public/tesseract/

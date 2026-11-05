@@ -10,6 +10,14 @@ export interface Page {
 }
 
 const MIN_TEXT = 50; // abaixo disso a página provavelmente é imagem
+
+/** O tesseract costuma ler "@" como "Q", "©" ou "®" (às vezes com espaço); sem isso o e-mail some da análise de LGPD. */
+export function fixOcrText(text: string): string {
+  return text.replace(
+    /\b([\w.%+-]+)\s?[@Q©®]\s?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|org|net|gov|jus|adv|edu|br)(?:\.br)?)\b/gi,
+    "$1@$2",
+  );
+}
 const MAX_PAGES = 200;
 
 export async function readPdf(file: File, onProgress: (msg: string) => void): Promise<Page[]> {
@@ -40,14 +48,19 @@ export async function readPdf(file: File, onProgress: (msg: string) => void): Pr
         onProgress(`OCR da página ${n} de ${total} (página escaneada)`);
         if (!ocr) {
           const { createWorker } = await import("tesseract.js");
-          ocr = await createWorker("por");
+          // Arquivos servidos pelo próprio site (scripts/copy-ocr.mjs), sem chamada a CDN
+          ocr = await createWorker("por", 1, {
+            workerPath: "/tesseract/worker.min.js",
+            corePath: "/tesseract",
+            langPath: "/tesseract/lang",
+          });
         }
         const viewport = page.getViewport({ scale: 2 });
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         await page.render({ canvas, viewport }).promise;
-        text = (await ocr.recognize(canvas)).data.text;
+        text = fixOcrText((await ocr.recognize(canvas)).data.text);
       }
       pages.push({ number: n, text, ocr: isScanned });
     }
