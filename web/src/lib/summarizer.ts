@@ -27,7 +27,14 @@ export function splitSentences(text: string): string[] {
   }
   return sentences
     .map((s) => s.trim())
-    .filter((s) => s.length >= 30 && s.length <= MAX_SENTENCE && s.replace(/[^a-zA-ZÀ-ú]/g, "").length >= 15);
+    .filter((s) => s.length >= 30 && s.length <= MAX_SENTENCE && s.replace(/[^a-zA-ZÀ-ú]/g, "").length >= 15)
+    .filter((s) => !isHeading(s));
+}
+
+/** Títulos de seção ("DOS FATOS", "RAZÕES DO RECURSO") vêm quase todo em maiúsculas. */
+function isHeading(s: string): boolean {
+  const letters = s.replace(/[^a-zA-ZÀ-ú]/g, "");
+  return letters.replace(/[^A-ZÀ-Þ]/g, "").length / letters.length > 0.7;
 }
 
 const words = (s: string) => (s.toLowerCase().match(/[a-zà-ú]+/g) ?? []).filter((w) => w.length > 2 && !STOPWORDS.has(w));

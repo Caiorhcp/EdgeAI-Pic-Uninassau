@@ -23,6 +23,12 @@ describe("summarize", () => {
     ]);
   });
 
+  it("ignora títulos em maiúsculas", () => {
+    expect(splitSentences("RAZÕES DO RECURSO EXTRAORDINÁRIO. A sentença julgou improcedente o pedido da autora.")).toEqual([
+      "A sentença julgou improcedente o pedido da autora.",
+    ]);
+  });
+
   it("devolve n frases na ordem original e prioriza o dispositivo", () => {
     const out = summarize(text, 3);
     expect(out).toHaveLength(3);
