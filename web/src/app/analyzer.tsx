@@ -71,11 +71,11 @@ export function Analyzer() {
           <label htmlFor="texto" className="sr-only">Texto do documento</label>
           <textarea id="texto" value={text} onChange={(e) => setText(e.target.value)} disabled={busy}
             placeholder="…ou cole o texto de uma peça processual aqui"
-            className="min-h-36 flex-1 resize-y rounded-xl border border-line bg-surface p-4 text-sm outline-none focus:border-accent" />
+            className="min-h-36 flex-1 resize-y rounded-xl border border-line bg-card p-4 text-sm outline-none focus:border-accent" />
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={busy || !text.trim()}
               onClick={() => run("Texto colado", async () => [{ number: 1, text, ocr: false }])}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-40">
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40">
               Analisar texto
             </button>
             <button type="button" disabled={busy} onClick={() => run("Exemplo", async () => EXAMPLE_PAGES)}
@@ -101,8 +101,8 @@ export function Analyzer() {
 
       {state.status === "done" && <Result result={state.result} name={state.name} onLookup={lookupProcess} />}
 
-      <section id="consulta" aria-labelledby="consulta-titulo" className="scroll-mt-6 rounded-xl border border-line p-5">
-        <h2 id="consulta-titulo" className="font-semibold">Consultar processo no Datajud (CNJ)</h2>
+      <section id="consulta" aria-labelledby="consulta-titulo" className="scroll-mt-6 rounded-xl border border-line bg-card p-5">
+        <h2 id="consulta-titulo" className="font-display text-lg font-semibold">Consultar processo no Datajud (CNJ)</h2>
         <p className="mb-4 mt-1 text-sm text-muted">
           Metadados públicos: classe, assuntos, órgão julgador e movimentações. Só o número do processo sai do seu
           navegador; o documento analisado acima, não.
@@ -222,8 +222,8 @@ function EntityList({ entities, onLookup }: { entities: Analysis["entities"]; on
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-line p-5">
-      <h3 className="mb-4 font-semibold">{title}</h3>
+    <div className="rounded-xl border border-line bg-card p-5">
+      <h3 className="mb-4 font-display text-lg font-semibold">{title}</h3>
       {children}
     </div>
   );

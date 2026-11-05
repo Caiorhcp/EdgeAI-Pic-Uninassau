@@ -60,7 +60,7 @@ export function ProcessLookup({ initial = "" }: { initial?: string }) {
           placeholder="0000000-00.0000.0.00.0000"
           className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-accent" />
         <button type="submit" disabled={state.status === "busy" || !value.trim()}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-40">
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40">
           {state.status === "busy" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Search className="size-4" aria-hidden />}
           Consultar
         </button>
@@ -76,7 +76,7 @@ export function ProcessLookup({ initial = "" }: { initial?: string }) {
         {state.status === "done" && (
           <div className="space-y-4">
             {state.instances.map((p, i) => (
-              <article key={i} className="rounded-xl border border-line p-5 text-sm">
+              <article key={i} className="rounded-xl border border-line bg-card p-5 text-sm">
                 <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                   <h4 className="font-semibold">{p.className || "Classe não informada"}</h4>
                   <span className="text-muted">{p.court} · {p.degree}</span>

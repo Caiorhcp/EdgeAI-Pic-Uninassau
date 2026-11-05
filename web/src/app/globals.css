@@ -1,34 +1,50 @@
 @import "tailwindcss";
 
+/*
+ * Paleta compartilhada com o projeto Prumo: papel (bege), petróleo (verde) e ocre (amarelo).
+ * Os pares texto/fundo seguem os contrastes medidos lá (WCAG 2.2 AA).
+ */
 :root {
-  --background: #fbfbfa;
-  --foreground: #1c1c1a;
-  --surface: #f1f0ec;
-  --line: #e2e0da;
-  --muted: #6b6a65;
-  --accent: #1f5f8b;
+  --background: #f4efe4; /* papel */
+  --card: #fbf8f2;
+  --surface: #efe9dc; /* campos, chips */
+  --line: #d8cfbd;
+  --foreground: #17211f;
+  --muted: #5f6963; /* 5,4:1, menor contraste usado em texto */
+  --accent: #1f5f63; /* petróleo */
+  --on-accent: #fbf8f2;
+  --gold: #8a5a14; /* ocre: texto de destaque */
+  --gold-bright: #c8962e; /* ocre claro: só decorativo (logo, barras) */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #111312;
-    --foreground: #ecebe7;
-    --surface: #1b1d1c;
-    --line: #2c2f2d;
-    --muted: #9c9b95;
-    --accent: #5aa3d6;
+    --background: #121816;
+    --card: #1a2220;
+    --surface: #222b29;
+    --line: #2e3835;
+    --foreground: #ece6d8;
+    --muted: #a3aaa3;
+    --accent: #6fb3b3;
+    --on-accent: #121816;
+    --gold: #dda851;
+    --gold-bright: #dda851;
   }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
   --color-surface: var(--surface);
   --color-line: var(--line);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-on-accent: var(--on-accent);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-source-serif), Cambria, Georgia, serif;
 }
 
 body {

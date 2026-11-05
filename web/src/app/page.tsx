@@ -21,8 +21,15 @@ export default function Home() {
           </p>
           <OfflineStatus />
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">S.A.P.O.</h1>
-        <p className="mt-1 text-sm font-medium uppercase tracking-wide text-accent">Sistema de Análise de Peças Offline</p>
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático; next/image não otimiza SVG */}
+          {/* No tema escuro, o verde-petróleo da logo some no fundo; a placa bege mantém o contraste */}
+          <img src="/logo.svg" alt="" width={84} height={70} className="shrink-0 dark:rounded-xl dark:bg-[#f4efe4] dark:p-1.5" />
+          <div>
+            <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">S.A.P.O.</h1>
+            <p className="mt-1 text-sm font-medium uppercase tracking-wide text-gold">Sistema de Análise de Peças Offline</p>
+          </div>
+        </div>
         <p className="mt-3 text-lg text-muted">
           Classifica peças processuais, encontra dados pessoais e resume documentos jurídicos, com um modelo
           treinado em documentos reais do STF que roda inteiro no seu dispositivo.
@@ -33,7 +40,7 @@ export default function Home() {
 
       <section className="mt-20 grid gap-10 border-t border-line pt-12 lg:grid-cols-[1fr_1.2fr]" aria-labelledby="como">
         <div>
-          <h2 id="como" className="text-xl font-semibold">Como funciona</h2>
+          <h2 id="como" className="font-display text-2xl font-semibold">Como funciona</h2>
           <ul className="mt-5 space-y-5 text-sm leading-relaxed">
             <li className="flex gap-3">
               <Cpu className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden />
@@ -60,7 +67,7 @@ export default function Home() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold">Resultado no conjunto de teste</h2>
+          <h2 className="font-display text-2xl font-semibold">Resultado no conjunto de teste</h2>
           <p className="mt-2 text-sm text-muted">F1 por página em 95.526 páginas, mesma divisão do artigo original.</p>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-sm">

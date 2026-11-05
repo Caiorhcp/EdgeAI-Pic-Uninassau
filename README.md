@@ -1,3 +1,5 @@
+<p align="center"><img src="web/public/logo.svg" alt="S.A.P.O." width="160"></p>
+
 # S.A.P.O. – Sistema de Análise de Peças Offline
 
 [![CI](https://github.com/Caiorhcp/sapo-juridico/actions/workflows/ci.yml/badge.svg)](https://github.com/Caiorhcp/sapo-juridico/actions/workflows/ci.yml)
@@ -16,6 +18,7 @@ Projeto de Iniciação Científica (PIC), UNINASSAU. Desenvolvimento: Caio R. ·
 - **Resumo extrativo**: frases mais centrais do texto (TF-IDF + similaridade), com peso maior para trechos de dispositivo e pedido.
 - **PDF escaneado**: OCR automático em português com tesseract.js, servido pelo próprio site (sem CDN).
 - **Consulta ao Datajud (CNJ)**: metadados públicos do processo (classe, assuntos, órgão julgador, movimentações). É a única parte que usa servidor, e só o número do processo é enviado.
+- **Funciona offline**: depois da primeira visita, um service worker guarda a página, o modelo e o OCR. O site abre e analisa documentos sem internet; só o Datajud precisa de conexão.
 
 ## Arquitetura
 
