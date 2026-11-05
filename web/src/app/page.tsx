@@ -90,7 +90,7 @@ export default function Home() {
       </section>
 
       <footer className="mt-16 flex flex-wrap justify-between gap-2 border-t border-line pt-6 text-xs text-muted">
-        <span>Projeto de Iniciação Científica · UNISSAU · Caio R.</span>
+        <span>Projeto de Iniciação Científica · UNINASSAU · Caio R.</span>
         <a href={REPO} className="underline-offset-4 hover:underline">Código no GitHub</a>
       </footer>
     </main>

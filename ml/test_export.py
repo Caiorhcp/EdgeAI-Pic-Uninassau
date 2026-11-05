@@ -18,7 +18,10 @@ def test_normalize():
     assert normalize("Lei 11.419/2006, Art. 5º") == ["lei", "art"]
 
 
-@pytest.mark.skipif(not OUT_MODEL.exists(), reason="rode python train.py antes")
+@pytest.mark.skipif(
+    not (OUT_MODEL.exists() and (DATA / "test.parquet").exists()),
+    reason="precisa do modelo treinado e do VICTOR em data/victor (não vão para o git)",
+)
 def test_write_ts_fixtures():
     model = json.loads(OUT_MODEL.read_text(encoding="utf-8"))
     texts = pd.read_parquet(DATA / "test.parquet", columns=["body"]).body.sample(20, random_state=0)
