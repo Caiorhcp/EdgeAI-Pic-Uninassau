@@ -1,4 +1,5 @@
 import { Cpu, Lock, Scale } from "lucide-react";
+import Image from "next/image";
 import { Analyzer } from "./analyzer";
 import { OfflineStatus } from "./offline-status";
 
@@ -22,9 +23,9 @@ export default function Home() {
           <OfflineStatus />
         </div>
         <div className="flex items-center gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático; next/image não otimiza SVG */}
           {/* No tema escuro, o verde-petróleo da logo some no fundo; a placa bege mantém o contraste */}
-          <img src="/logo.svg" alt="" width={84} height={70} className="shrink-0 dark:rounded-xl dark:bg-[#f4efe4] dark:p-1.5" />
+          <Image src="/logo.svg" alt="" width={84} height={70} priority unoptimized
+            className="shrink-0 dark:rounded-xl dark:bg-[#f4efe4] dark:p-1.5" />
           <div>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">S.A.P.O.</h1>
             <p className="mt-1 text-sm font-medium uppercase tracking-wide text-gold">Sistema de Análise de Peças Offline</p>
