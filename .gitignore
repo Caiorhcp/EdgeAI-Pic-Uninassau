@@ -1,6 +1,10 @@
 # Ambiente Python
 venv/
+.venv/
 __pycache__/
+
+# Dataset VICTOR (baixado do Hugging Face, CC-BY-NC — não redistribuir)
+data/victor/
 *.pyc
 
 # Dados e Banco de Dados Local
