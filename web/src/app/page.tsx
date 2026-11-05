@@ -2,6 +2,7 @@ import { Cpu, Lock, Scale } from "lucide-react";
 import Image from "next/image";
 import { Analyzer } from "./analyzer";
 import { OfflineStatus } from "./offline-status";
+import { ThemeToggle } from "./theme-toggle";
 
 // Números de ml/metrics.json (teste do VICTOR Small, 95.526 páginas) e da Tabela 2 de Luz de Araujo et al. (LREC 2020)
 const BENCHMARK = [
@@ -30,6 +31,7 @@ export default function Home() {
             <Lock className="size-3.5" aria-hidden /> Processado no seu navegador · nenhum arquivo é enviado
           </p>
           <OfflineStatus />
+          <div className="ml-auto"><ThemeToggle /></div>
         </div>
         <div className="flex items-center gap-4">
           {/* No tema escuro, o verde-petróleo da logo some no fundo; a placa bege mantém o contraste */}

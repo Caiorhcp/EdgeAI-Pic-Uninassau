@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tema escolhido pelo botão (data-theme no <html>), não só pela preferência do sistema */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
  * Paleta compartilhada com o projeto Prumo: papel (bege), petróleo (verde) e ocre (amarelo).
  * Os pares texto/fundo seguem os contrastes medidos lá (WCAG 2.2 AA).
@@ -17,19 +20,18 @@
   --gold-bright: #c8962e; /* ocre claro: só decorativo (logo, barras) */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121816;
-    --card: #1a2220;
-    --surface: #222b29;
-    --line: #2e3835;
-    --foreground: #ece6d8;
-    --muted: #a3aaa3;
-    --accent: #6fb3b3;
-    --on-accent: #121816;
-    --gold: #dda851;
-    --gold-bright: #dda851;
-  }
+[data-theme="dark"] {
+  --background: #121816;
+  --card: #1a2220;
+  --surface: #222b29;
+  --line: #2e3835;
+  --foreground: #ece6d8;
+  --muted: #a3aaa3;
+  --accent: #6fb3b3;
+  --on-accent: #121816;
+  --gold: #dda851;
+  --gold-bright: #dda851;
+  color-scheme: dark; /* barras de rolagem, campos de data etc. também no escuro */
 }
 
 @theme inline {
