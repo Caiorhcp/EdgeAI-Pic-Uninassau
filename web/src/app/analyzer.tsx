@@ -108,6 +108,7 @@ export function Analyzer() {
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-2 print:hidden">
         <label
+          id="enviar"
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={(e) => { e.preventDefault(); setDragging(false); onFiles(e.dataTransfer.files); }}

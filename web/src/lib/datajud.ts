@@ -70,15 +70,15 @@ export async function fetchProcess(cnj: Cnj, alias: string): Promise<Instance[]>
       cache: "no-store",
     });
   } catch {
-    throw new DatajudError("O Datajud não respondeu a tempo. Tente novamente em instantes.", 504);
+    throw new DatajudError("O Datajud não respondeu a tempo: a API do CNJ está lenta neste momento.", 504);
   }
   if (res.status === 401 || res.status === 403) {
     throw new DatajudError("O Datajud recusou a chave de acesso. A chave pública pode ter mudado.", 502);
   }
   if (res.status === 429) {
-    throw new DatajudError("O Datajud limitou o número de consultas. Aguarde um minuto e tente de novo.", 429);
+    throw new DatajudError("O Datajud limitou o número de consultas neste momento.", 429);
   }
-  if (!res.ok) throw new DatajudError(`O Datajud respondeu com erro (${res.status}).`, 502);
+  if (!res.ok) throw new DatajudError(`O Datajud está instável e respondeu com erro (${res.status}).`, 502);
 
   const data = (await res.json()) as { hits?: { hits?: { _source: Source }[] } };
   return (data.hits?.hits ?? []).map(({ _source: s }) => ({

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, FileDown, Loader2, Search } from "lucide-react";
+import { AlertTriangle, FileDown, Loader2, Search, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Instance } from "@/lib/datajud";
 import {
@@ -117,7 +117,17 @@ type State =
   | { status: "idle" }
   | { status: "busy" }
   | { status: "done"; numero: string; instances: Instance[] }
-  | { status: "error"; msg: string };
+  | { status: "error"; msg: string; limited?: boolean };
+
+// Limite de consultas (429), lentidão (504) e instabilidade (502) do Datajud: o caminho é analisar os autos em PDF
+const LIMITED = new Set([429, 502, 504]);
+
+/** Leva até a área de envio de PDFs (id="enviar" no analisador) e abre a escolha de arquivos. */
+function goToUpload() {
+  const area = document.getElementById("enviar");
+  area?.scrollIntoView({ behavior: "smooth", block: "center" });
+  area?.querySelector<HTMLInputElement>("input[type=file]")?.click();
+}
 
 const fmtDate = (iso: string | null) => parseDatajudDate(iso)?.toLocaleDateString("pt-BR", { timeZone: "UTC" }) ?? "—";
 
@@ -129,7 +139,9 @@ async function lookup(numero: string): Promise<State> {
       body: JSON.stringify({ numero }),
     });
     const data = (await res.json()) as { error?: string; numero?: string; instances?: Instance[] };
-    if (!res.ok || !data.instances) return { status: "error", msg: data.error ?? "Erro inesperado na consulta." };
+    if (!res.ok || !data.instances) {
+      return { status: "error", msg: data.error ?? "Erro inesperado na consulta.", limited: LIMITED.has(res.status) };
+    }
     return { status: "done", numero: data.numero!, instances: data.instances };
   } catch {
     return {
@@ -188,7 +200,22 @@ export function ProcessLookup({ initial = "", onResult, onReport }: {
           <p className="text-sm text-muted">Consultando o Datajud. A API do CNJ costuma levar até um minuto…</p>
         )}
         {state.status === "error" && (
-          <p role="alert" className="rounded-lg border border-line bg-surface p-3 text-sm">{state.msg}</p>
+          <div role="alert" className="rounded-lg border border-line bg-surface p-3 text-sm">
+            <p className={state.limited ? "font-semibold text-gold" : undefined}>{state.msg}</p>
+            {state.limited && (
+              <>
+                <p className="mt-2">
+                  O melhor caminho é baixar os autos manualmente no sistema do tribunal (PJe, eproc, e-SAJ, Projudi…) e
+                  adicionar os PDFs aqui no S.A.P.O. para a varredura completa: partes, dispositivo, prazos, valores e
+                  relatório em PDF, tudo processado no seu navegador.
+                </p>
+                <button type="button" onClick={goToUpload}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent">
+                  <Upload className="size-4" aria-hidden /> Adicionar os autos em PDF
+                </button>
+              </>
+            )}
+          </div>
         )}
         {state.status === "done" && (
           <div className="space-y-4">
