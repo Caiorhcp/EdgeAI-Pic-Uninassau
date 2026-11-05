@@ -1,32 +1,20 @@
-# Ambiente Python
+# Python
+.venv/
 venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 
-# Dados e Banco de Dados Local
-data/raw/
-data/entradas/
-data/quarentena/
-data/seguros/
-data/processed/*.npy
-*.db
-*.sqlite3
+# Dados locais. O VICTOR (CC-BY-NC) é baixado do Hugging Face e não pode ser redistribuído.
+/data/
+# Artefatos da versão 1 (TensorFlow) que ainda existam no disco
+/models/
 
-
-# Modelos Pesados de Treinamento
-models/*.h5
-models/*.keras
-
-# Variáveis de Ambiente e IDEs
+# Segredos e ferramentas
 .env
+.env.*
+.vercel/
 .vscode/
 .idea/
 .DS_Store
-
-# Streamlit & Testes
-.streamlit/
-.pytest_cache/
-htmlcov/
 *.log
-pyright_out.txt
-.pyre/

@@ -1,0 +1,112 @@
+{
+  "dataset": "VICTOR Small (STF, LREC 2020), F1 por página",
+  "params": {
+    "max_features": 30000,
+    "C": 30.0,
+    "ngram_range": [
+      1,
+      2
+    ]
+  },
+  "n": {
+    "train": 149217,
+    "validation": 94735,
+    "test": 95526
+  },
+  "test": {
+    "accuracy": 0.9496158114021314,
+    "f1_macro": 0.7823947487382145,
+    "f1_weighted": 0.9473209262602802,
+    "per_class": {
+      "acordao_de_2_instancia": 0.8835489833641405,
+      "agravo_em_recurso_extraordinario": 0.5676190476190476,
+      "despacho_de_admissibilidade": 0.7123287671232876,
+      "outros": 0.9735304866376235,
+      "peticao_do_RE": 0.7459168210136387,
+      "sentenca": 0.8114243866715489
+    },
+    "balanced_accuracy": 0.7418385297095536
+  },
+  "test_uniform_prior": {
+    "f1_macro": 0.5756158133369903,
+    "balanced_accuracy": 0.8681351442788614,
+    "recall_per_class": {
+      "acordao_de_2_instancia": 0.9743589743589743,
+      "agravo_em_recurso_extraordinario": 0.7686040195545899,
+      "despacho_de_admissibilidade": 0.9040404040404041,
+      "outros": 0.8926213001124016,
+      "peticao_do_RE": 0.7837624387932396,
+      "sentenca": 0.8854237288135594
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "acordao_de_2_instancia",
+      "agravo_em_recurso_extraordinario",
+      "despacho_de_admissibilidade",
+      "outros",
+      "peticao_do_RE",
+      "sentenca"
+    ],
+    "matrix": [
+      [
+        239,
+        0,
+        0,
+        34,
+        0,
+        0
+      ],
+      [
+        1,
+        894,
+        0,
+        789,
+        157,
+        0
+      ],
+      [
+        0,
+        0,
+        130,
+        68,
+        0,
+        0
+      ],
+      [
+        28,
+        333,
+        31,
+        83912,
+        957,
+        147
+      ],
+      [
+        0,
+        81,
+        0,
+        1819,
+        4430,
+        1
+      ],
+      [
+        0,
+        1,
+        6,
+        357,
+        3,
+        1108
+      ]
+    ]
+  },
+  "paper_baseline_svic": {
+    "SVM": {
+      "macro": 76.32,
+      "weighted": 94.25
+    },
+    "CNN": {
+      "macro": 75.84,
+      "weighted": 94.72
+    }
+  }
+}
